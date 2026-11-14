@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="fa" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ورود استاد</title>
+<style>
+body{margin:0;padding:24px 16px;background:#1B1712;color:#F3E9D2;font-family:system-ui,sans-serif;max-width:420px;margin-inline:auto}
+select,input,button{width:100%;box-sizing:border-box;margin:6px 0;padding:13px;border-radius:12px;border:1px solid #4A3D22;background:#26201A;color:#F3E9D2;font-size:16px}
+button{background:#D4A03C;color:#1B1712;font-weight:700;border:0}#m{margin-top:10px;min-height:24px;color:#F0C868}
+</style></head><body>
+<h2 style="color:#F0C868">🎼 ورود استاد</h2>
+<select id="n"><option value="">نام استاد…</option></select>
+<input id="c" type="password" inputmode="numeric" placeholder="کد ورود" autocomplete="off">
+<button id="go">ورود</button><div id="m"></div>
+<script>
+var URL_='https://script.google.com/macros/s/AKfycbxLF0ZX8f2cnOAkdh8OjGAMwYilsGdrqMslVVgL_ipTWOfDe5s0Xz-tbSFUbl695EdT/exec',$=function(i){return document.getElementById(i);};
+function b64e(u){var s='',i;for(i=0;i<u.length;i+=8192)s+=String.fromCharCode.apply(null,u.subarray(i,i+8192));return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
+function b64d(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';var b=atob(s),u=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u;}
+function gz(u,c){var s=new (c?CompressionStream:DecompressionStream)('gzip'),w=s.writable.getWriter();w.write(u);w.close();return new Response(s.readable).arrayBuffer().then(function(b){return new Uint8Array(b);});}
+function enc(o){var u=new TextEncoder().encode(JSON.stringify(o));return window.CompressionStream?gz(u,1).then(function(c){return 'g'+b64e(c);}):Promise.resolve('p'+b64e(u));}
+function dec(s){s=s.trim();var u=b64d(s.slice(1));return (s[0]==='g'?gz(u,0):Promise.resolve(u)).then(function(x){return JSON.parse(new TextDecoder().decode(x));});}
+
+function post(o){var ac=new AbortController(),t=setTimeout(function(){ac.abort();},30000);
+ return fetch(URL_,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(o),signal:ac.signal}).then(function(r){clearTimeout(t);return r.json();});}
+post({a:'teachers'}).then(function(r){(r.names||[]).forEach(function(x){var o=document.createElement('option');o.value=o.textContent=x;$('n').appendChild(o);});}).catch(function(){$('m').textContent='اتصال برقرار نشد';});
+$('go').onclick=function(){
+ var n=$('n').value,c=$('c').value.trim(); if(!n||!c){$('m').textContent='نام و کد را وارد کن';return;}
+ $('m').textContent='در حال ورود…';
+ post({a:'tlogin',name:n,code:c}).then(function(r){
+  if(!r.ok){$('m').textContent=r.err==='locked'?'۱۰ دقیقه قفل شد؛ بعداً تلاش کن':r.err==='bad'?'کد اشتباه است (یا داده‌ای هنوز ارسال نشده)':'خطا';return;}
+  return dec(r.parts.join('')).then(function(o){
+   try{
+    if(localStorage.getItem('acWebLastUser')!==n){localStorage.removeItem('academyTeacherOutbox_v1');localStorage.setItem('acWebLastUser',n);}
+    localStorage.setItem('academyDeviceRole','teacher');
+    localStorage.setItem('academyManagerSession',JSON.stringify({userId:o.user.id,token:'web',user:o.user}));
+    sessionStorage.setItem('acWebTeacher',JSON.stringify(o));
+   }catch(e){$('m').textContent='ذخیره در مرورگر ممکن نیست (حالت خصوصی؟)';return;}
+   location.href='teacher-app.html';
+  });
+ }).catch(function(){$('m').textContent='گوگل جواب نداد؛ اینترنت/فیلترشکن را بررسی کن';});
+};
+</script></body></html>
