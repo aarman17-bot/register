@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="fa" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>همگام‌سازی آموزشگاه</title>
+<style>
+body{margin:0;padding:16px;background:#1B1712;color:#F3E9D2;font-family:system-ui,sans-serif;max-width:480px;margin-inline:auto}
+input,textarea,button{width:100%;box-sizing:border-box;margin:5px 0;padding:11px;border-radius:12px;border:1px solid #4A3D22;background:#26201A;color:#F3E9D2;font-size:15px}
+button{background:#D4A03C;color:#1B1712;font-weight:700;border:0}
+#log{white-space:pre-line;line-height:1.9;margin:12px 0}
+</style></head><body>
+<h3 style="color:#F0C868">🌐 همگام‌سازی با سایت</h3>
+<input id="u" dir="ltr" placeholder="آدرس Web App">
+<input id="s" dir="ltr" type="password" placeholder="SECRET" autocomplete="off">
+<button id="go">شروع</button>
+<div id="log"></div>
+<div id="ret" hidden>
+<textarea id="code" readonly dir="ltr" rows="3"></textarea>
+<button id="cp">کپی کد ثبت‌نام‌ها</button>
+<button id="ch" hidden>باز کردن در کروم (اپ مدیر)</button>
+</div>
+<script>
+var K='acSync',cfg={},P=null,$=function(i){return document.getElementById(i);};
+try{cfg=JSON.parse(localStorage.getItem(K)||'{}');}catch(e){}
+function say(t){$('log').textContent+=t+'\n';}
+function b64e(u){var s='',i;for(i=0;i<u.length;i+=8192)s+=String.fromCharCode.apply(null,u.subarray(i,i+8192));return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
+function b64d(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';var b=atob(s),u=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u;}
+function gz(u,c){var s=new (c?CompressionStream:DecompressionStream)('gzip'),w=s.writable.getWriter();w.write(u);w.close();return new Response(s.readable).arrayBuffer().then(function(b){return new Uint8Array(b);});}
+function enc(o){var u=new TextEncoder().encode(JSON.stringify(o));return window.CompressionStream?gz(u,1).then(function(c){return 'g'+b64e(c);}):Promise.resolve('p'+b64e(u));}
+function dec(s){s=s.trim();var u=b64d(s.slice(1));return (s[0]==='g'?gz(u,0):Promise.resolve(u)).then(function(x){return JSON.parse(new TextDecoder().decode(x));});}
+function post(o){var ac=new AbortController(),t=setTimeout(function(){ac.abort();},25000);
+ return fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({secret:cfg.secret},o)),signal:ac.signal})
+ .then(function(r){clearTimeout(t);return r.json();});}
+async function run(){
+ cfg.url=$('u').value.trim();cfg.secret=$('s').value.trim();
+ try{localStorage.setItem(K,JSON.stringify(cfg));}catch(e){}
+ $('log').textContent='';$('ret').hidden=true;
+ if(!cfg.url||!cfg.secret){say('آدرس و SECRET را وارد کن');return;}
+ try{
+  var r,d=(P&&P.d)||[];
+  if(P&&P.t){say('در حال ارسال برنامه…');r=await post({a:'push',updatedAt:P.u,teachers:P.t});
+   if(!r.ok){say(r.err==='auth'?'❌ SECRET اشتباه است':'❌ خطا: '+r.err);return;}
+   say('✓ برنامه ارسال شد ('+P.t.length+' استاد)');}
+  if(d.length)await post({a:'ack',ids:d});
+  r=await post({a:'pull'});
+  if(!r.ok){say(r.err==='auth'?'❌ SECRET اشتباه است':'❌ خطا: '+r.err);return;}
+  var regs=r.regs.filter(function(g){return d.indexOf(g.id)<0;});
+  say('✓ '+regs.length+' ثبت‌نام جدید');
+  if(regs.length){
+   var c=await enc({regs:regs});$('code').value=c;$('ret').hidden=false;
+   if(P&&P.r){$('ch').hidden=false;$('ch').onclick=function(){location.href='intent://'+P.r+'/manager#webregs='+c+'#Intent;scheme=http;package=com.android.chrome;end';};}
+   say('حالا «کپی کد» را بزن، برگرد به اپ مدیر ← 🌐 ← چسباندن ← دریافت.');
+  }else say('کار تمام شد؛ می‌توانی برگردی.');
+ }catch(e){say('❌ '+(e&&e.name==='AbortError'?'گوگل جواب نداد (اینترنت/فیلترشکن)':'اتصال ناموفق'));}
+}
+$('go').onclick=run;
+$('cp').onclick=function(){var t=$('code');t.select();t.setSelectionRange(0,t.value.length);var ok=false;try{ok=document.execCommand('copy');}catch(e){}say(ok?'✓ کپی شد':'کپی نشد؛ متن کادر را دستی کپی کن');};
+$('u').value=cfg.url||'';$('s').value=cfg.secret||'';
+var m=location.hash.match(/d=([^&]+)/);
+if(m){dec(m[1]).then(function(o){P=o;if(o.url&&!cfg.url){cfg.url=o.url;$('u').value=o.url;}
+ try{history.replaceState(null,'',location.pathname);}catch(e){}
+ say('داده‌ی برنامه رسید ('+((o.t||[]).length)+' استاد)');
+ if(cfg.url&&cfg.secret)run();else say('SECRET را وارد کن و «شروع» را بزن.');
+}).catch(function(){say('❌ لینک خراب است');});}
+else say('بدون داده‌ی برنامه؛ «شروع» فقط ثبت‌نام‌های جدید را می‌گیرد.');
+</script></body></html>
