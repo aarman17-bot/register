@@ -32,7 +32,7 @@ $('go').onclick=function(){
     if(localStorage.getItem('acWebLastUser')!==n){localStorage.removeItem('academyTeacherOutbox_v1');localStorage.setItem('acWebLastUser',n);}
     localStorage.setItem('academyDeviceRole','teacher');
     localStorage.setItem('academyManagerSession',JSON.stringify({userId:o.user.id,token:'web',user:o.user}));
-    sessionStorage.setItem('acWebTeacher',JSON.stringify(o));
+    o.code=c;o.url=URL_;sessionStorage.setItem('acWebTeacher',JSON.stringify(o));
    }catch(e){$('m').textContent='ذخیره در مرورگر ممکن نیست (حالت خصوصی؟)';return;}
    location.href='teacher-app.html';
   });

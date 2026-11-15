@@ -731,8 +731,15 @@ return Object.assign({}, h, { nextSessionOverride: startDate, updatedAt: Date.no
 return { history: out, changed: changed };
 }
 function structuredScheduleChanges(s, sinceDate){
-var raw = (s.scheduleHistory||[]).map(function(h){ return Object.assign({}, h); })
-.sort(function(a,b){ return a.date<b.date?-1:(a.date>b.date?1:0); });
+var raw = (s.scheduleHistory||[]).map(function(h){ return Object.assign({}, h); });
+var _psm = s.scheduledMove;
+if(_psm && _psm.effectiveFrom && _psm.day && s.day && _psm.day!==s.day){
+var _pp = moveEntryParts(s, _psm);
+var _pe = { date:_pp.date, fromDay:s.day, toDay:_psm.day, fromTime:s.time, toTime:_psm.time, __pending:true };
+if(_pp.override) _pe.nextSessionOverride = _pp.override;
+raw.push(_pe);
+}
+raw = raw.sort(function(a,b){ return a.date<b.date?-1:(a.date>b.date?1:0); });
 var knownDay = s.day;
 for(var i=raw.length-1;i>=0;i--){
 var h = raw[i];
@@ -810,6 +817,13 @@ if(att.some(function(r){ return r.studentId===s.id && r.date===d; })) return nul
 return d;
 }
 return null;
+}
+function moveEntryParts(s, sm){
+var drop = droppedOldSessionDate(s, sm);
+var date = drop || sm.effectiveFrom, ov = null;
+if(drop) ov = sm.effectiveFrom;
+else if(sm.day && s.day && sm.day!==s.day && weekdayKeyOf(sm.effectiveFrom)===sm.day) ov = sm.effectiveFrom;
+return { date: date, override: ov };
 }
 function oldSlotVacated(s){
 var sm = s && s.scheduledMove;
@@ -6527,7 +6541,99 @@ this.patch({ shopManageEnabled: next });
 this.showToast(next ? "دسترسیِ موقتِ منشی به مدیریتِ کالاها باز شد" : "دسترسیِ منشی به مدیریتِ کالاها بسته شد");
 },
 isAdmin: function(){ return !!(this.currentUser && this.currentUser.role==="admin"); },
-patch: function(o){ return this.persist(Object.assign({}, this.data, o)); },
+patch: function(o){ var next = Object.assign({}, this.data, o); try{ this._recUndo(this.data, o); }catch(_u){} return this.persist(next); },
+_undoHash: function(v){ var t = JSON.stringify(v); if(t===undefined) return "u"; var h = 5381; for(var i=0;i<t.length;i++){ h = ((h<<5)+h+t.charCodeAt(i))|0; } return t.length+":"+h; },
+_undoLabel: function(keys){
+var M = { students:"شاگردان", attendance:"حضور و غیاب", cancelledClassDates:"کلاس‌های لغوشده", makeupClassDates:"جبرانی‌ها", cancelledClassStudentIds:"لغوِ شاگردی", settlements:"تسویه‌ها", dayRoster:"برنامه‌ی معلم‌ها", rates:"تعرفه‌ها", reminders:"یادآورها", users:"کاربرها", messages:"پیام‌ها", consultationRequests:"مشاوره‌ها", instruments:"سازها" };
+return keys.map(function(k){ return M[k]||k; }).join("، ");
+},
+_recUndo: function(prev, o){
+if(!this.isAdmin() || this._undoing) return;
+if(Date.now() - (this._lastUserAt||0) > 3000) return;
+var self = this, keys = Object.keys(o).filter(function(k){ return o[k]!==prev[k] && !/(Ok|At|Ts)$|^kiosk|^fullSync|^availability/.test(k); });
+if(!keys.length) return;
+var st = this._undoStack = this._undoStack || [];
+var last = st[st.length-1], now = Date.now();
+var merge = last && (now - last.t) < 1200;
+var e = merge ? last : { t: now, before: {}, after: {}, names: [], ids: [], done: [], msg: "" };
+keys.forEach(function(k){
+if(!(k in e.before)){ var pv = prev[k]; e.before[k] = (pv===undefined) ? undefined : JSON.parse(JSON.stringify(pv)); }
+e.after[k] = self._undoHash(o[k]);
+});
+if(keys.indexOf("students")>-1 && Array.isArray(o.students)){
+var pb = {}; (prev.students||[]).forEach(function(x){ pb[x.id] = x; });
+o.students.forEach(function(x){ if(pb[x.id]!==x){ if(x.id!=null && e.ids.indexOf(x.id)<0) e.ids.push(x.id); if(x.name && e.names.indexOf(x.name)<0 && e.names.length<3) e.names.push(x.name); } });
+}
+if(!merge){ st.push(e); if(st.length>15) st.shift(); } else { e.t = now; }
+},
+undoLast: function(idx){
+if(!this.isAdmin()) return;
+var st = this._undoStack || [], self = this;
+if(typeof idx!=="number") idx = st.length-1;
+var e = st[idx];
+if(!e){ this.showToast("تغییری برایِ برگردوندن نیست."); return; }
+var d = this.data, drift = Object.keys(e.after).filter(function(k){ return self._undoHash(d[k])!==e.after[k]; });
+var what = e.msg ? ("«"+e.msg+"»") : ("تغییر در: "+this._undoLabel(Object.keys(e.after))+(e.names.length?(" — "+e.names.join("، ")):""));
+var text = "آخرین تغییر برگردونده بشه؟\n\n"+what+"\n\nپیامک یا اعلانی که با اون تغییر رفته باشه پس گرفته نمی‌شه."
++ (drift.length ? ("\n\n⚠️ بعد از اون تغییر، «"+this._undoLabel(drift)+"» دوباره عوض شده (احتمالاً از دستگاه دیگه یا خودکار). برگردوندن، اون تغییرات رو هم به حالتِ قبل می‌بره.") : "");
+this.confirmDialog = { text: text, onConfirm: function(){ self._doUndo(idx); } };
+this.render();
+},
+undoStudent: function(id){
+if(!this.isAdmin()) return;
+var st = this._undoStack || [], idx = -1, self = this;
+for(var i=st.length-1;i>=0;i--){ if(st[i].ids && st[i].ids.indexOf(id)>-1 && (st[i].done||[]).indexOf(id)<0){ idx = i; break; } }
+if(idx<0){ this.showToast("تغییری برایِ این شاگرد برایِ برگردوندن نیست."); return; }
+var e = st[idx], other = Object.keys(e.after).filter(function(k){ return k!=="students"; });
+var b = e.before.students ? e.before.students.filter(function(x){ return x.id===id; })[0] : null;
+var cur = findById(this.data.students, id);
+if(other.length || !b || !cur){ this.undoLast(idx); return; }
+var what = e.msg ? ("«"+e.msg+"»") : ("تغییر در «"+cur.name+"»");
+this.confirmDialog = { text: "آخرین تغییرِ «"+cur.name+"» برگردونده بشه؟\n\n"+what+"\n\nپیامک یا اعلانی که رفته باشه پس گرفته نمی‌شه. فقط همین شاگرد برمی‌گرده، بقیه دست‌نخورده می‌مونن.",
+onConfirm: function(){
+self.confirmDialog = null;
+var now = Date.now(), ts = Object.assign({}, b.__fieldTs||{}), ks = Object.keys(ts);
+if(!ks.length) ts = { schedule:now, profile:now, course:now }; else ks.forEach(function(k){ ts[k] = now; });
+var restored = Object.assign({}, b, { __fieldTs: ts });
+var nextS = self.data.students.map(function(x){ return x.id===id ? restored : x; });
+self._undoing = true;
+try{ self.persist(Object.assign({}, self.data, { students: nextS })); }finally{ self._undoing = false; }
+e.done = (e.done||[]).concat([id]);
+e.after.students = self._undoHash(self.data.students);
+if(e.ids.every(function(x){ return e.done.indexOf(x)>-1; })){ var j = (self._undoStack||[]).indexOf(e); if(j>-1) self._undoStack.splice(j,1); }
+self.showToast("↩︎ آخرین تغییرِ «"+cur.name+"» برگردونده شد.");
+} };
+this.render();
+},
+renderStudentUndoBtn: function(id){
+if(!this.isAdmin()) return '';
+var has = (this._undoStack||[]).some(function(e){ return e.ids && e.ids.indexOf(id)>-1 && (e.done||[]).indexOf(id)<0; });
+return '<button class="icon-btn" title="برگردوندنِ آخرین تغییرِ این شاگرد" style="opacity:'+(has?'1':'.35')+'" onclick="App.undoStudent(\''+id+'\')">↩︎</button>';
+},
+_doUndo: function(idx){
+this.confirmDialog = null;
+var st = this._undoStack || [], e = st[idx];
+if(!e || !this.isAdmin()){ this.render(); return; }
+st.splice(idx,1);
+var next = Object.assign({}, this.data), now = Date.now();
+Object.keys(e.before).forEach(function(k){ next[k] = e.before[k]; });
+if(e.before.students){
+var cur = {}; (this.data.students||[]).forEach(function(x){ cur[x.id] = JSON.stringify(x); });
+var curObj = {}; (this.data.students||[]).forEach(function(x){ curObj[x.id] = x; });
+next.students = e.before.students.map(function(x){
+if((e.done||[]).indexOf(x.id)>-1 && curObj[x.id]) return curObj[x.id];
+if(cur[x.id]===JSON.stringify(x)) return x;
+var ts = Object.assign({}, x.__fieldTs||{}); var ks = Object.keys(ts);
+if(!ks.length) ts = { schedule:now, profile:now, course:now }; else ks.forEach(function(k){ ts[k] = now; });
+return Object.assign({}, x, { __fieldTs: ts });
+});
+}
+if(e.before.reminders){ var ri = {}; e.before.reminders.forEach(function(r){ if(r && r.id!=null) ri[r.id] = 1; }); next.deletedReminderIds = (this.data.deletedReminderIds||[]).filter(function(id){ return !ri[id]; }); }
+if(e.before.pendingCoordPrompts){ var ci = {}; e.before.pendingCoordPrompts.forEach(function(r){ if(r && r.id!=null) ci[r.id] = 1; }); next.deletedCoordPromptIds = (this.data.deletedCoordPromptIds||[]).filter(function(id){ return !ci[id]; }); }
+this._undoing = true;
+try{ this.persist(next); }finally{ this._undoing = false; }
+this.showToast("↩︎ آخرین تغییر برگردونده شد.");
+},
 selfTeacherLabel: function(){ return "استاد آرمان"; },
 tabAllowed: function(tabKey){
 var role = this.currentUser && this.currentUser.role;
@@ -6795,6 +6901,7 @@ this.pushStudentLookupToLocalServer();
 },
 showToast: function(msg, ms){
 var self = this;
+try{ var _u = this._undoStack && this._undoStack[this._undoStack.length-1]; if(_u && !_u.msg && !this._undoing && Date.now()-_u.t<2500) _u.msg = String(msg); }catch(_e){}
 this.toast = msg;
 if(this.toastTimer) clearTimeout(this.toastTimer);
 this.renderToastOnly();
@@ -8663,17 +8770,41 @@ if(f.time==null || !slotOpenOnAnyTeacher(v, f.time)){ var o = slotsForDayAny(v);
 this.render();
 },
 scheduleMoveFormSetTime: function(v){ this.scheduleMoveForm.time = v; this.render(); },
-scheduleMoveFormSetJYear: function(v){ this.scheduleMoveForm.jy = Number(v); this.render(); },
-scheduleMoveFormSetJMonth: function(v){ this.scheduleMoveForm.jm = Number(v); this.render(); },
-scheduleMoveFormSetJDay: function(v){ this.scheduleMoveForm.jd = Number(v); this.render(); },
+scheduleMoveFormSetJYear: function(v){ this.scheduleMoveForm.jy = Number(v); },
+scheduleMoveFormSetJMonth: function(v){ this.scheduleMoveForm.jm = Number(v); },
+scheduleMoveFormSetJDay: function(v){ this.scheduleMoveForm.jd = Number(v); },
 scheduleMoveFormToggleRenewal: function(){ this.scheduleMoveForm.withRenewal = !this.scheduleMoveForm.withRenewal; this.render(); },
+scheduleMoveFormToggleOverride: function(){
+var f = this.scheduleMoveForm; if(!f) return;
+f.overrideOn = !f.overrideOn;
+if(f.overrideOn && !f.ojy){
+var base = jalaliToIso(f.jy, f.jm, Math.min(f.jd, daysInJalaliMonth(f.jy, f.jm)));
+var rd = dayKeyOfBucket(f.day), jp0 = isoToJalali(base);
+var cand = base;
+for(var k=0;k<7;k++){ if(weekdayKeyOf(cand)===rd) break; cand = addDays(cand,1); }
+var jp = isoToJalali(cand);
+f.ojy = jp[0]; f.ojm = jp[1]; f.ojd = jp[2];
+}
+this.render();
+},
+scheduleMoveFormSetOJYear: function(v){ this.scheduleMoveForm.ojy = Number(v); this.render(); },
+scheduleMoveFormSetOJMonth: function(v){ this.scheduleMoveForm.ojm = Number(v); this.render(); },
+scheduleMoveFormSetOJDay: function(v){ this.scheduleMoveForm.ojd = Number(v); this.render(); },
 confirmScheduleMoveForm: function(){
 var mf = this.scheduleMoveForm;
 if(!mf) return;
 var errEl = document.getElementById("smf-error");
 var maxDay = daysInJalaliMonth(mf.jy, mf.jm);
 var effectiveFrom = jalaliToIso(mf.jy, mf.jm, Math.min(mf.jd, maxDay));
-this.scheduleFutureMove(mf.studentId, mf.day, mf.time, effectiveFrom, mf.withRenewal, errEl);
+var nextOverride = null;
+if(mf.overrideOn){
+var oIso = jalaliToIso(mf.ojy, mf.ojm, Math.min(mf.ojd, daysInJalaliMonth(mf.ojy, mf.ojm)));
+var oReal = dayKeyOfBucket(mf.day);
+if(oIso < effectiveFrom){ if(errEl) errEl.textContent = "تاریخِ «جلسه‌ی بعد» نمی‌تونه قبل از تاریخِ اجرایِ جابجایی باشه."; return; }
+if(weekdayKeyOf(oIso)!==oReal){ if(errEl) errEl.textContent = "این تاریخ با روزِ «"+dayLabel(oReal)+"» یکی نیست — یه تاریخِ "+dayLabel(oReal)+" انتخاب کن."; return; }
+nextOverride = oIso;
+}
+this.scheduleFutureMove(mf.studentId, mf.day, mf.time, effectiveFrom, mf.withRenewal, errEl, nextOverride);
 },
 performMoveStudent: function(id, newDay, newTime, nextSessionOverride){
 var s = findById(this.data.students,id);
@@ -8724,7 +8855,7 @@ this.offerMoveSms([{ id: id, date: validOverride || computeNextRealSessionAfterM
 }catch(e){ console.warn("offerMoveSms(move) failed", e); }
 }
 },
-scheduleFutureMove: function(id, day, time, effectiveFrom, withRenewal, errEl){
+scheduleFutureMove: function(id, day, time, effectiveFrom, withRenewal, errEl, nextOverride){
 var self = this;
 var s = findById(this.data.students,id);
 if(!s) return;
@@ -8749,14 +8880,14 @@ if(s.scheduledMove && !(this.scheduleMoveForm && this.scheduleMoveForm.isEdit)){
 var prev = s.scheduledMove;
 this.confirmDialog = {
 text: "این شاگرد از قبل یه جابجاییِ برنامه‌ریزی‌شده داره:\n"+dayLabel(prev.day)+" "+fmtSlotDisplay(prev.time)+" — از "+fmtDate(prev.effectiveFrom)+"\n\nمی‌خوای با این تغییرِ جدید جایگزین بشه؟",
-onConfirm: function(){ self._doScheduleFutureMove(id, day, time, effectiveFrom, withRenewal); }
+onConfirm: function(){ self._doScheduleFutureMove(id, day, time, effectiveFrom, withRenewal, nextOverride); }
 };
 this.render();
 return;
 }
-this._doScheduleFutureMove(id, day, time, effectiveFrom, withRenewal);
+this._doScheduleFutureMove(id, day, time, effectiveFrom, withRenewal, nextOverride);
 },
-_doScheduleFutureMove: function(id, day, time, effectiveFrom, withRenewal){
+_doScheduleFutureMove: function(id, day, time, effectiveFrom, withRenewal, nextOverride){
 this.confirmDialog = null;
 var s = findById(this.data.students,id);
 if(!s) return;
@@ -8770,6 +8901,7 @@ id: uid(), day:realDay, time:time, teacherId:teacherId, effectiveFrom:effectiveF
 previousDay: s.day||null, previousTime: s.time||null, previousTeacherId: s.teacherId||null,
 renewal: withRenewal ? { courseType: s.courseType, customFields: { customSessions:s.customSessions, customPrice:s.customPrice, customTeacherPerSession:s.customTeacherPerSession }, paymentReceived:true } : null
 };
+if(nextOverride) sm.nextSessionOverride = nextOverride;
 var next = this.data.students.map(function(x){ return x.id===id ? Object.assign({}, x, { scheduledMove: sm,
 __fieldTs: Object.assign({}, x.__fieldTs||{}, { schedule: Date.now() }) }) : x; });
 this.patch({ students: next });
@@ -8930,10 +9062,10 @@ var next = d.students.map(function(s){
 if(!(s.scheduledMove && s.scheduledMove.effectiveFrom<=today)) return s;
 var sm = s.scheduledMove;
 var logText = "جابجاییِ زمان‌بندی‌شده اجرا شد: از "+dayLabel(s.day)+" "+fmtSlotDisplay(s.time)+" به "+dayLabel(sm.day)+" "+fmtSlotDisplay(sm.time);
-var _drop = droppedOldSessionDate(s, sm);
-var _entry = { id: uid(), date: _drop || sm.effectiveFrom, updatedAt: Date.now(), text: logText,
+var _parts = moveEntryParts(s, sm);
+var _entry = { id: uid(), date: _parts.date, updatedAt: Date.now(), text: logText,
 fromDay:s.day, toDay:sm.day, fromTime:s.time, toTime:sm.time };
-if(_drop) _entry.nextSessionOverride = sm.effectiveFrom;
+if(_parts.override) _entry.nextSessionOverride = _parts.override;
 var hist = (s.scheduleHistory||[]).concat([_entry]);
 if(sm.renewal) renewalQueue.push({ id: s.id, renewal: sm.renewal });
 return Object.assign({}, s, { day: sm.day, time: sm.time, teacherId: sm.teacherId, scheduleHistory: hist, scheduledMove: null,
@@ -9002,7 +9134,15 @@ var s = findById(this.data.students,id);
 if(!s) return;
 var der = deriveStudent(s, this.data.rates);
 if(der.pendingStart){ this.showToast("این شاگرد فریز/رزروه — الان جلسه‌ای برایِ لغو نداره."); return; }
-var jp = isoToJalali(todayISO());
+var _defIso = todayISO();
+try{
+var _ts = Ledger.ensureTerms(s, this.data.rates), _ct = Ledger.resolveCurrentTerm(_ts);
+if(_ct && !_ct.pendingStart && _ct.startDate){
+var _ss = Ledger.sessionsForTerm(_ct, this.data.rates, s).filter(function(x){ return x.status!=="cancelled" && x.date<=_defIso; });
+if(_ss.length) _defIso = _ss[_ss.length-1].date;
+}
+}catch(e){}
+var jp = isoToJalali(_defIso);
 this.voidSessionForm = { studentId: id, jy: jp[0], jm: jp[1], jd: jp[2] };
 this.render();
 },
@@ -9071,6 +9211,43 @@ this.showToast("جلسه‌ی "+fmtDate(dateISO)+" برایِ «"+s.name+"» ل�
 var noteText = "«"+s.name+"» — جلسه‌ی "+fmtDate(dateISO)+" لغو شد (دلیل: "+reason+").";
 if(!(this.currentUser && this.currentUser.role==="secretary")) this.notifySecretaries(noteText);
 this.notifyAdmins(noteText);
+},
+unvoidSession: function(studentId, sessionIndex){
+if(!this.isAdmin()) return;
+var self = this;
+var s = findById(this.data.students,studentId);
+if(!s) return;
+var terms0 = Ledger.ensureTerms(s, this.data.rates);
+var ct = Ledger.resolveCurrentTerm(terms0);
+var meta = ((ct && ct.cancelledMeta) || {})[sessionIndex] || {};
+this.confirmDialog = {
+text: "لغوِ جلسه‌ی "+(meta.date?fmtDate(meta.date):"")+" برایِ «"+s.name+"» برداشته بشه؟\n\nجلسه دوباره عادی حساب می‌شه (از تعدادِ باقی‌مونده کم می‌شه).",
+onConfirm: function(){ self.performUnvoidSession(studentId, sessionIndex); }
+};
+this.render();
+},
+performUnvoidSession: function(studentId, sessionIndex){
+this.confirmDialog = null;
+var s = findById(this.data.students,studentId);
+if(!s) return;
+var terms = Ledger.ensureTerms(s, this.data.rates).slice();
+var curIdx = Ledger.currentTermIndex(terms);
+var curTerm = curIdx>-1 ? terms[curIdx] : null;
+if(!curTerm) return;
+var meta = (curTerm.cancelledMeta||{})[sessionIndex] || {};
+var newMeta = Object.assign({}, curTerm.cancelledMeta||{}); delete newMeta[sessionIndex];
+var newCancelled = (curTerm.cancelledIndexes||[]).filter(function(i){ return i!==sessionIndex; });
+terms[curIdx] = Object.assign({}, curTerm, { cancelledIndexes: newCancelled, cancelledMeta: newMeta });
+var dateISO = meta.date;
+var attList = (this.data.attendance||[]).filter(function(r){ return !(r.studentId===studentId && r.date===dateISO && r.voided); });
+var notes = (s.notes||"").split("\n").filter(function(l){ return !(dateISO && l.indexOf("⛔ "+fmtDate(dateISO)+" — جلسه لغو شد")===0); }).join("\n");
+var nextStudents = this.data.students.map(function(x){
+if(x.id!==studentId) return x;
+return Object.assign({}, x, { terms: terms, notes: notes,
+__fieldTs: Object.assign({}, x.__fieldTs||{}, { profile: Date.now() }) });
+});
+this.patch({ students: nextStudents, attendance: attList });
+this.showToast("لغوِ جلسه‌ی "+(dateISO?fmtDate(dateISO):"")+" برداشته شد.");
 },
 //@@APP-NOTIFY-MESSAGES-LOG  notifyAdmins/Secretaries/Teacher, describeStudentChanges
 notifyAdmins: function(text, action){
@@ -16927,6 +17104,7 @@ var tabletTitle = (d.kioskPullOk===true || d.kioskSyncOk===true || d.fullSyncOk=
 return ''
 + '<div class="status-strip">'
 + '<button type="button" class="tablet-dot" title="ریفرش" aria-label="ریفرش" onclick="App.refreshPage()">↻</button>'
++ (this.isAdmin() ? ('<button type="button" class="tablet-dot" title="برگردوندنِ آخرین تغییر" aria-label="برگردوندنِ آخرین تغییر" style="min-width:0;padding-left:10px;padding-right:10px;opacity:'+((this._undoStack&&this._undoStack.length)?'1':'.35')+'" onclick="App.undoLast()">↩︎</button>') : '')
 + '<button type="button" class="mini-date" style="cursor:pointer" onclick="App.toggleQuickCalendar()">'+fmtDateWithWeekday(todayISO())+'</button>'
 + '<button class="tablet-dot" title="'+esc(tabletTitle)+'" onclick="App.tab=\'settings\'; App.render();">'+tabletDot+' تبلت</button>'
 + '<button class="tablet-dot" title="خروج از حساب" onclick="App.logout()">👤 '+esc(this.currentUser.username)+' — خروج</button>'
@@ -21724,9 +21902,9 @@ var monthOptions = JALALI_MONTHS.map(function(mn,i){ return '<option value="'+(i
 var dayOptionsJalali=""; for(var dnum=1;dnum<=31;dnum++){ dayOptionsJalali += '<option value="'+dnum+'"'+(dnum===mj[2]?' selected':'')+'>'+toPersianDigits(dnum)+'</option>'; }
 manualBlock = ''
 + '<label class="field"><span>تاریخِ دستیِ جلسه‌ی بعدی (شمسی) — باید «'+dayLabel(mc.day)+'» باشه</span><div class="jalali-picker">'
-+ '<select id="mns-day">'+dayOptionsJalali+'</select>'
-+ '<select id="mns-month">'+monthOptions+'</select>'
-+ '<select id="mns-year">'+yearOptions+'</select>'
++ '<select id="mns-day" onchange="App.moveNextSessionConfirm.manualJalali[2]=Number(this.value)">'+dayOptionsJalali+'</select>'
++ '<select id="mns-month" onchange="App.moveNextSessionConfirm.manualJalali[1]=Number(this.value)">'+monthOptions+'</select>'
++ '<select id="mns-year" onchange="App.moveNextSessionConfirm.manualJalali[0]=Number(this.value)">'+yearOptions+'</select>'
 + '</div></label>'
 + '<div id="mns-error" style="color:var(--brick);font-weight:700;margin-bottom:8px"></div>'
 + '<button class="btn btn-ghost btn-full" style="margin-bottom:8px" onclick="App.toggleMoveNextSessionManual()">بازگشت به تاریخِ پیشنهادیِ قانون</button>';
@@ -21756,6 +21934,7 @@ var dayOptions = (s.teacherId==="self")
 ? DAYS.map(function(dd){ return '<option value="'+dd.key+'"'+(dd.key===mf.day?' selected':'')+'>'+dd.label+'</option>'; }).join("")
 : allTeacherBuckets(this.data).map(function(b){ return '<option value="'+b.key+'"'+(b.key===mf.day?' selected':'')+'>'+esc(dayLabel(b.key))+'</option>'; }).join("");
 var timeOptions = slotsForDay((s.teacherId==="self" ? "self:"+mf.day : mf.day), [mf.time]).map(function(sl){ return '<option value="'+sl+'"'+(sl===mf.time?' selected':'')+'>'+fmtSlotDisplay(sl)+'</option>'; }).join("");
+var overrideBlock = '';
 var expiredNote = deriveStudent(s, this.data.rates).expired
 ? '<label class="field" style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="smf-renewal"'+(mf.withRenewal?' checked':'')+' onchange="App.scheduleMoveFormToggleRenewal()"><span>همراه با تمدیدِ ترم (وقتی ترمِ فعلی تا اون تاریخ تموم شده باشه)</span></label>'
 : '';
@@ -21772,6 +21951,7 @@ return ''
 + '<select id="smf-year" onchange="App.scheduleMoveFormSetJYear(this.value)">'+yearOptions+'</select>'
 + '</div></label>'
 + expiredNote
++ overrideBlock
 + '<div class="teacher-sub" style="margin-bottom:8px">تا قبل از این تاریخ، برنامه‌ی فعلیِ «'+esc(s.name)+'» ('+dayLabel(s.day)+' '+fmtSlotDisplay(s.time)+') کاملاً دست‌نخورده می‌مونه.</div>'
 + '<div id="smf-error" style="color:var(--brick);font-weight:700;margin-bottom:8px"></div>'
 + '<div class="sheet-actions">'
@@ -21837,9 +22017,9 @@ return ''
 + '<h2 class="sheet-title">لغوِ یه جلسه‌ی اشتباه — «'+esc(s.name)+'»</h2>'
 + '<div class="teacher-sub" style="margin-bottom:10px">برایِ وقتی که یه جلسه اشتباهی برگزار/ثبت شده (مثلاً یادِ فریز‌کردن رفته) — این جلسه انگار اصلاً تشکیل نشده در نظر گرفته می‌شه: نه از شاگرد کم می‌شه، نه به معلم حقوق تعلق می‌گیره، تعدادِ باقی‌مونده هم خودکار زیاد می‌شه.</div>'
 + '<label class="field"><span>تاریخِ جلسه (شمسی)</span><div class="jalali-picker">'
-+ '<select id="vs-day">'+dayOptionsJalali+'</select>'
-+ '<select id="vs-month">'+monthOptions+'</select>'
-+ '<select id="vs-year">'+yearOptions+'</select>'
++ '<select id="vs-day" onchange="App.voidSessionForm.jd=Number(this.value)">'+dayOptionsJalali+'</select>'
++ '<select id="vs-month" onchange="App.voidSessionForm.jm=Number(this.value)">'+monthOptions+'</select>'
++ '<select id="vs-year" onchange="App.voidSessionForm.jy=Number(this.value)">'+yearOptions+'</select>'
 + '</div></label>'
 + '<label class="field"><span>دلیل</span><textarea id="vs-reason" rows="2" placeholder="مثلاً: یادم رفت فریز کنم"></textarea></label>'
 + '<div id="vs-error" style="color:var(--brick);font-weight:700;margin-bottom:8px"></div>'
@@ -21851,7 +22031,7 @@ renderPendingStudentDetail: function(s, der){
 var exp = s.pendingExpectedDate;
 return ''
 + '<div class="panel">'
-+ '<div class="topbar"><button class="icon-btn" onclick="App.closeStudentDetail()">→</button><h1>'+esc(s.name)+'</h1>'+this.renderStudentReminderBell(s.id)+'</div>'
++ '<div class="topbar"><button class="icon-btn" onclick="App.closeStudentDetail()">→</button><h1>'+esc(s.name)+'</h1>'+'<div style="display:flex;gap:6px">'+this.renderStudentUndoBtn(s.id)+this.renderStudentReminderBell(s.id)+'</div></div>'
 + '<div class="card">'
 + '<div class="card-name" style="margin-bottom:6px">🧊 منتظرِ شروع</div>'
 + '<div class="breakdown-row"><span>نوعِ دوره</span><span>'+esc(resolveRate(s, this.data.rates).label)+'</span></div>'
@@ -21961,7 +22141,7 @@ var isVoidedSlot = voidedIdx.indexOf(i)>-1;
 if(isVoidedSlot){
 var vm = voidedMeta[i] || {};
 dots += '<div class="beat-dated" title="'+esc('جلسه لغو شد'+(vm.reason?(' — '+vm.reason):''))+'">'+(jumpMarkerPending?jumpMarkerHtml:'')
-+ '<span class="beat-dot" style="display:flex;align-items:center;justify-content:center;font-size:9px;background:transparent;opacity:.8">⛔</span>'
++ '<span class="beat-dot" '+(self.isAdmin()?('onclick="App.unvoidSession(\''+s.id+'\','+i+')" title="برایِ برداشتنِ لغو بزن" '):'')+'style="display:flex;align-items:center;justify-content:center;font-size:9px;background:transparent;opacity:.8;cursor:pointer">⛔</span>'
 + '<span class="beat-date-label" style="text-decoration:line-through;opacity:.7">'+fmtDateShort(dDate)+'</span></div>';
 continue;
 }
@@ -22174,7 +22354,7 @@ miscLinks.push('<span style="font-size:12px;color:var(--ink-soft);text-decoratio
 if(miscLinks.length) actionsHtml += '<div style="display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:center;margin-top:10px">'+miscLinks.join('')+'</div>';
 return ''
 + '<div class="panel">'
-+ '<div class="topbar"><button class="icon-btn" onclick="App.closeStudentDetail()">→</button><h1>'+esc(s.name)+termStarsHtml(termCountFor(s), true)+'</h1>'+this.renderStudentReminderBell(s.id)+'</div>'
++ '<div class="topbar"><button class="icon-btn" onclick="App.closeStudentDetail()">→</button><h1>'+esc(s.name)+termStarsHtml(termCountFor(s), true)+'</h1>'+'<div style="display:flex;gap:6px">'+this.renderStudentUndoBtn(s.id)+this.renderStudentReminderBell(s.id)+'</div></div>'
 + pendingPaymentBadge
 + this.renderGroupPlayingUnlockedBanner(s)
 + '<div class="detail-card">'
@@ -25455,7 +25635,36 @@ App.resolveSession();
  if(!W||!W.user||!W.payload){ try{ location.replace("teacher.html"); }catch(e){} return; }
  try{ App.applyServerPayload(W.payload, W.v||1); }catch(e){ try{ window.__academyShowError("خطا در بارگذاری داده: "+e.message); }catch(e2){} }
  setInterval(function(){ if(!App.currentUser){ try{ sessionStorage.removeItem("acWebTeacher"); }catch(e){} location.replace("teacher.html"); } },1500);
- var b=document.createElement("div"); b.textContent="نسخه‌ی آزمایشی — فقط مشاهده"; b.style.cssText="position:fixed;bottom:76px;left:8px;z-index:99999;background:#D4A03C;color:#1B1712;font:700 11px system-ui;padding:3px 9px;border-radius:10px;opacity:.9;pointer-events:none"; document.body.appendChild(b);
+ var WEBURL=W.url, NM=W.user.name, EK="acWebOut:"+NM, dirty=false, busyS=false, base={}, baseSig={}, baseTomb=W.payload.deletedAttendance||{}, E={att:{},sigs:{},tomb:{}};
+ function b64e(u){var s="",i;for(i=0;i<u.length;i+=8192)s+=String.fromCharCode.apply(null,u.subarray(i,i+8192));return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");}
+ function enc(o){var u=new TextEncoder().encode(JSON.stringify(o)); if(!window.CompressionStream) return Promise.resolve("p"+b64e(u)); var s=new CompressionStream("gzip"),w=s.writable.getWriter(); w.write(u); w.close(); return new Response(s.readable).arrayBuffer().then(function(b){ return "g"+b64e(new Uint8Array(b)); });}
+ (W.payload.attendance||[]).forEach(function(r){ base[r.studentId+"|"+r.date]=r.recordedAt; });
+ (W.payload.settlements||[]).forEach(function(x){ if(x.status==="signed"&&x.signature) baseSig[x.id]=1; });
+ try{ var s0=JSON.parse(localStorage.getItem(EK)||"null"); if(s0&&s0.att) E=s0; }catch(e){}
+ var pl=document.createElement("div"); pl.style.cssText="position:fixed;bottom:76px;left:8px;z-index:99999;color:#1B1712;font:700 11px system-ui;padding:3px 9px;border-radius:10px;opacity:.92;pointer-events:none";
+ function pill(t,ok){ pl.textContent=t; pl.style.background=ok?"#6FCF97":"#D4A03C"; }
+ function prune(){ Object.keys(E.att).forEach(function(k){ if((base[k]||"")>=E.att[k].recordedAt) delete E.att[k]; }); Object.keys(E.sigs).forEach(function(i){ if(baseSig[i]) delete E.sigs[i]; }); Object.keys(E.tomb).forEach(function(k){ if((baseTomb[k]||"")>=E.tomb[k]) delete E.tomb[k]; }); }
+ function empty(){ return !Object.keys(E.att).length&&!Object.keys(E.sigs).length&&!Object.keys(E.tomb).length; }
+ function saveE(){ try{ localStorage.setItem(EK,JSON.stringify(E)); }catch(e){} }
+ function send(){
+  if(busyS) return; prune(); saveE();
+  if(empty()){ dirty=false; pill("✓ ارسال شده",1); return; }
+  busyS=true; pill("در حال ارسال…",0);
+  enc({att:Object.keys(E.att).map(function(k){return E.att[k];}),sigs:Object.keys(E.sigs).map(function(i){return E.sigs[i];}),tomb:E.tomb}).then(function(c){
+   var parts=[]; for(var i=0;i<c.length;i+=40000) parts.push(c.slice(i,i+40000));
+   return fetch(WEBURL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({a:"tevent",name:NM,code:W.code,parts:parts})}).then(function(r){ return r.json(); });
+  }).then(function(r){ busyS=false; if(r&&r.ok){ dirty=false; pill("✓ ارسال شد",1); } else pill(r&&r.err==="bad"?"دوباره وارد شو":"ارسال نشد؛ دوباره تلاش می‌شود",0); }).catch(function(){ busyS=false; pill("اینترنت قطع است؛ دوباره تلاش می‌شود",0); });
+ }
+ function onSave(n){
+  (n.attendance||[]).forEach(function(r){ if(r&&r.recordedAt){ var k=r.studentId+"|"+r.date; if(base[k]!==r.recordedAt&&(!E.att[k]||E.att[k].recordedAt<r.recordedAt)) E.att[k]=r; } });
+  (n.settlements||[]).forEach(function(x){ if(x&&x.status==="signed"&&x.signature&&!baseSig[x.id]) E.sigs[x.id]=x; });
+  var d=n.deletedAttendance||{}; Object.keys(d).forEach(function(k){ if(baseTomb[k]!==d[k]&&(!E.tomb[k]||E.tomb[k]<d[k])) E.tomb[k]=d[k]; });
+  saveE(); dirty=true; setTimeout(send,1200);
+ }
+ var _so=window.saveTeacherOutbox; window.saveTeacherOutbox=function(n){ var r=_so(n); try{ onSave(n||{}); }catch(e){} return r; };
+ document.body.appendChild(pl); pill("✓ متصل",1);
+ prune(); if(!empty()){ dirty=true; setTimeout(send,2500); }
+ setInterval(function(){ if(dirty) send(); },30000);
 })();
 App.render();
 App.startAfterInit();
@@ -25504,5 +25713,6 @@ document.addEventListener("visibilitychange", function(){ if(document.visibility
 window.addEventListener("pageshow", function(){ window.__appShownAt = Date.now(); });
 </script>
 
+<script>(function(){ function m(){ try{ if(window.App) App._lastUserAt = Date.now(); }catch(e){} } ["pointerdown","touchstart","keydown","click"].forEach(function(ev){ document.addEventListener(ev, m, true); }); })();</script>
 </body>
 </html>
