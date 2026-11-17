@@ -6,7 +6,7 @@
 <style>
 :root{--cream:#12100C;--surface:#1B1712;--ink:#F3E9D2;--ink-soft:#B8A47C;--line:#4A3D22;--primary:#D4A03C;--primary-dark:#8B6420;--primary-bg:#2E2410;--amber:#F0C868;--brick:#C0453A;--stage:#0A0806;--stage-line:#3A2E18}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0}
+html,body{margin:0;max-width:100%;overflow-x:hidden}
 body{font-family:'Vazirmatn',Tahoma,Arial,sans-serif;color:var(--ink);background:radial-gradient(120% 55% at 50% 0%,#2A200D 0%,#120E07 45%,#0A0806 100%) fixed;min-height:100vh;direction:rtl;padding:0 0 calc(175px + env(safe-area-inset-bottom))}
 .hide{display:none!important}
 header.top{text-align:center;padding:max(14px,env(safe-area-inset-top)) 10px 0}
@@ -70,7 +70,7 @@ label.l{display:block;font-size:13.5px;color:var(--ink-soft);margin:8px 4px 2px}
 .glass-field-main .req{display:inline;color:var(--brick)}
 .glass-field input{width:100%;border:0;outline:0;background:transparent;color:var(--ink);font:inherit;font-size:17px;padding:2px 0}
 .glass-field-icon{font-size:24px}
-.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.hp{position:absolute;top:0;right:0;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none}
 .err{min-height:22px;color:#F29A8F;font-size:14px;text-align:center;margin:2px 0 4px}
 /* تایید نهایی */
 .pay-glass-card{border:1.5px solid rgba(212,175,55,.45);border-radius:18px;padding:6px 14px;background:linear-gradient(180deg,rgba(46,36,16,.6),rgba(27,23,18,.9))}
@@ -282,8 +282,8 @@ function r3(b){
  $("bNext").onclick=function(){
   var name=$("kf-name").value.trim(), ph=en($("kf-phone").value).replace(/[\s\-]/g,"");
   if(ph.indexOf("+98")==0) ph="0"+ph.slice(3); else if(/^98\d{10}$/.test(ph)) ph="0"+ph.slice(2);
-  if(name.length<3){ er.textContent="نام و نام خانوادگی را وارد کنید."; return; }
-  if(!/^09\d{9}$/.test(ph)){ er.textContent="شماره را مثل 09123456789 وارد کنید."; return; }
+  if(name.length<3){ er.textContent="نام و نام خانوادگی را وارد کنید."; try{ er.scrollIntoView({block:"center",behavior:"smooth"}); }catch(e){} return; }
+  if(!/^09\d{9}$/.test(ph)){ er.textContent="شماره را مثل 09123456789 وارد کنید."; try{ er.scrollIntoView({block:"center",behavior:"smooth"}); }catch(e){} return; }
   S.name=name; S.phone=ph; S.birth=$("kf-birth")?en($("kf-birth").value).trim():""; S.hp=$("website").value; go(4); };
 }
 /* ۵) پرداخت (مثل کیوسک) */
