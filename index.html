@@ -7,7 +7,7 @@
 :root{--cream:#12100C;--surface:#1B1712;--ink:#F3E9D2;--ink-soft:#B8A47C;--line:#4A3D22;--primary:#D4A03C;--primary-dark:#8B6420;--primary-bg:#2E2410;--amber:#F0C868;--brick:#C0453A;--stage:#0A0806;--stage-line:#3A2E18}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0}
-body{font-family:'Vazirmatn',Tahoma,Arial,sans-serif;color:var(--ink);background:radial-gradient(120% 55% at 50% 0%,#2A200D 0%,#120E07 45%,#0A0806 100%) fixed;min-height:100vh;direction:rtl;padding:0 0 env(safe-area-inset-bottom)}
+body{font-family:'Vazirmatn',Tahoma,Arial,sans-serif;color:var(--ink);background:radial-gradient(120% 55% at 50% 0%,#2A200D 0%,#120E07 45%,#0A0806 100%) fixed;min-height:100vh;direction:rtl;padding:0 0 calc(175px + env(safe-area-inset-bottom))}
 .hide{display:none!important}
 header.top{text-align:center;padding:max(14px,env(safe-area-inset-top)) 10px 0}
 .logo{position:relative;width:150px;height:150px;margin:0 auto}
@@ -81,7 +81,7 @@ label.l{display:block;font-size:13.5px;color:var(--ink-soft);margin:8px 4px 2px}
 .pay-total-amount{color:var(--primary);font-size:19px}
 .note2{margin-top:12px;padding:11px 13px;border-radius:14px;background:var(--primary-bg);border:1px solid var(--line);font-size:13.5px;line-height:1.9;color:var(--ink-soft)}
 /* نوار پایین: مراحل + دکمه‌ها */
-.wz-nav{position:sticky;bottom:0;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(180deg,rgba(18,16,12,.94),#0E0B07);border-top:1.5px solid rgba(212,175,55,.45);z-index:5}
+.wz-nav{position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:100%;max-width:480px;border-radius:18px 18px 0 0;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(180deg,rgba(18,16,12,.94),#0E0B07);border-top:1.5px solid rgba(212,175,55,.45);z-index:5}
 .wz-btns{display:flex;gap:10px;margin-bottom:10px}
 .wz-back{flex:0 0 auto;min-width:110px;min-height:50px;padding:0 18px;border-radius:14px;background:var(--surface);border:1.5px solid var(--line);color:var(--ink);font:inherit;font-size:16px;font-weight:700;cursor:pointer}
 .wz-next{flex:1;min-height:52px;border-radius:14px;border:0;font:inherit;font-size:18px;font-weight:800;color:#1B1204;cursor:pointer;background:linear-gradient(135deg,#B8860B 0%,#F6D77A 38%,#FFF3C4 52%,#D4AF37 75%,#B8860B 100%);box-shadow:0 6px 22px rgba(212,175,55,.3),inset 0 1px 0 rgba(255,255,255,.5)}
@@ -89,15 +89,36 @@ label.l{display:block;font-size:13.5px;color:var(--ink-soft);margin:8px 4px 2px}
 .wz-next.locked{opacity:.45;filter:grayscale(.35);box-shadow:none}
 .wz-next:disabled{opacity:.6}
 .wz-stepper{display:flex;align-items:flex-start;justify-content:center;gap:0}
-.si{display:flex;flex-direction:column;align-items:center;gap:4px;width:58px}
+.si{display:flex;flex-direction:column;align-items:center;gap:4px;width:52px}
 .sc{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--line);background:var(--surface);color:var(--ink-soft);font-weight:800;font-size:15px}
 .sc svg{width:56%;height:56%;display:block}
 .si.done .sc{background:var(--primary-bg);border-color:var(--primary);color:var(--amber)}
 .si.active .sc{background:linear-gradient(145deg,#F6D27C,#D4A03C 55%,#B8842E);border-color:#F6DE9E;color:#1B1712;transform:scale(1.12)}
-.sl{font-size:11.5px;color:var(--ink-soft);font-weight:700;text-align:center;white-space:nowrap}
+.sl{font-size:11px;color:var(--ink-soft);font-weight:700;text-align:center;white-space:nowrap}
 .si.done .sl{color:var(--ink)}.si.active .sl{color:var(--amber);font-weight:800}
-.sa{flex:0 0 14px;height:34px;display:flex;align-items:center;justify-content:center;color:var(--line)}
+.sa{flex:0 0 10px;height:34px;display:flex;align-items:center;justify-content:center;color:var(--line)}
 .sa svg{width:100%;height:12px}.si.done+.sa{color:var(--primary)}
+
+/* پرداخت (مثل کیوسک) */
+.pay-notice{border:1.5px solid rgba(212,160,60,.45);border-radius:18px;padding:12px 14px;margin-bottom:14px;background:linear-gradient(180deg,rgba(212,160,60,.1),rgba(212,160,60,.03))}
+.pay-notice-title{color:var(--primary);font-weight:800;font-size:17px;margin-bottom:4px}
+.pay-notice p{font-size:13.5px;color:var(--ink-soft);line-height:1.95;margin:6px 0}
+.pay-notice-strong{color:var(--amber)!important;font-weight:800;text-align:center;font-size:14.5px!important}
+.pay-gl{border:1.5px solid var(--line);border-radius:20px;padding:14px;margin-bottom:14px;background:rgba(27,23,18,.55)}
+.pay-gl .pay-card-title{border:0;padding:0 0 12px;font-size:17px;color:var(--primary)}
+.pay-bank-visual{position:relative;border-radius:18px;padding:20px 16px;margin-bottom:12px;text-align:center;background:linear-gradient(135deg,#3B2C0F,#17110A 60%,#2B200C);border:1.5px solid rgba(212,175,55,.6);box-shadow:inset 0 0 40px rgba(212,175,55,.08)}
+.pay-bank-chip{width:38px;height:28px;border-radius:6px;margin:0 auto 12px;background:linear-gradient(145deg,#F6D27C,#B8842E)}
+.pay-card-number{font-size:24px;font-weight:800;letter-spacing:2px;color:var(--amber);direction:ltr;word-break:break-all}
+.pay-card-holder{font-size:14px;color:var(--ink-soft);margin-top:12px}
+.pay-card-holder b{display:block;color:var(--ink);font-size:17px;margin-top:3px}
+.pay-card-instruction{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;color:var(--ink-soft);line-height:1.8}
+.pay-card-receipt{font-size:13.5px;color:var(--ink-soft);line-height:1.9;margin-top:10px}
+.pay-confirm-row{display:flex;align-items:center;gap:14px;padding:14px;border-radius:16px;border:1.5px solid var(--line);background:var(--surface);font-size:18px;font-weight:800;cursor:pointer;margin:2px 0 8px}
+.pay-confirm-row.checked{border-color:var(--primary);background:var(--primary-bg)}
+.pay-confirm-row.shake{animation:shk .5s;border-color:var(--brick)}
+.pay-checkbox{width:32px;height:32px;flex-shrink:0;border-radius:9px;border:2px solid var(--primary);display:flex;align-items:center;justify-content:center;font-size:20px;color:#1B1204}
+.pay-checkbox.checked{background:linear-gradient(180deg,#F0C868,#B8862C);box-shadow:0 0 12px rgba(212,160,60,.5)}
+@keyframes shk{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
 /* موفقیت */
 .success{max-width:480px;margin:10px auto 0;padding:22px 16px 26px;text-align:center;border:1.5px solid rgba(212,175,55,.55);border-radius:22px;background:var(--cream)}
 .success-badge{width:96px;height:96px}
@@ -135,19 +156,21 @@ var IC={
  calendar:svg('<rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 17.4h.01M12 17.4h.01" stroke-width="2.6"/>'),
  idcard:svg('<rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="11" r="2"/><path d="M6.5 16.2c.5-1.7 1.7-2.5 2.5-2.5s2 .8 2.5 2.5M14 9.5h4M14 13h4"/>'),
  badge:svg('<circle cx="12" cy="12" r="9"/><path d="M7.8 12.4l3 3 5.4-6" stroke-width="2.3"/>'),
+ card:svg('<rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3 10h18M7 15h4"/>'),
  check:svg('<path d="M5 12.5l4.5 4.5L19 7.5" stroke-width="2.6"/>'),
  user:svg('<circle cx="12" cy="8.2" r="4"/><path d="M4.5 20.5c.8-4 4-6.3 7.5-6.3s6.7 2.3 7.5 6.3"/>'),
  arrow:'<svg viewBox="0 0 48 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M43 12H7"/><path d="M15 4L6 12l9 8"/></svg>'
 };
 var BADGE='<svg viewBox="0 0 64 64"><defs><linearGradient id="gb" x1="6" y1="4" x2="58" y2="60" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#F6D77A"/><stop offset="1" stop-color="#B8860B"/></linearGradient></defs><circle cx="32" cy="32" r="32" fill="url(#gb)"/><circle cx="20" cy="46" r="7" fill="#fff"/><circle cx="40" cy="41" r="7" fill="#fff"/><path d="M27 46 V16 L47 11 V41" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
-var STEPS=["ساز","روز و ساعت","نوع دوره","مشخصات","تایید نهایی"], SICON=[IC.note,IC.clock,IC.calendar,IC.idcard,IC.badge];
+var STEPS=["ساز","روز و ساعت","نوع دوره","مشخصات","پرداخت","تایید نهایی"], SICON=[IC.note,IC.clock,IC.calendar,IC.idcard,IC.card,IC.badge], WSTEPS=5;
 var FB=["گیتار","پیانو","ویولن","سه‌تار","تار","سنتور","تنبک","آواز","فلوت / نی","درامز","هنوز مطمئن نیستم"];
 var DAYS=["شنبه","یکشنبه","دوشنبه","سه‌شنبه","چهارشنبه","پنجشنبه"], PARTS=["صبح","ظهر","عصر","شب"];
 var PLAN_KEYS=["monthly","quarterly","semiannual"];
 var D=null, ST=0, S={};
-function reset(){ S={ins:"",gi:-1,day:"",time:"",teacher:"",mode:"",wd:[],wt:[],plan:"",sub:"",any:false,fbDay:"",fbPart:""}; }
+function reset(){ S={ins:"",gi:-1,day:"",time:"",teacher:"",mode:"",wd:[],wt:[],plan:"",sub:"",any:false,fbDay:"",fbPart:"",paid:false}; }
 reset();
+function hasPay(){ return !!(D&&D.accountNumber); }
 function hasPlans(){ return !!(D&&D.rates&&PLAN_KEYS.some(function(k){ return D.rates[k]; })); }
 function planLabel(k){ var r=D&&D.rates&&D.rates[k]; if(!r) return ""; return k==="monthly"?(r.label+" (فقط ماه اول)"):r.label; }
 function slotTxt(){ return S.mode==="slot"?(S.day+" · ساعت "+fa(S.time)):((S.day||"")+(S.time?" · "+S.time.split("، ").map(fa).join("، "):"")); }
@@ -162,7 +185,7 @@ function drawStepper(){
  });
 }
 function drawTop(title){
- $("wt").textContent=title; $("ws").textContent="مرحله‌ی "+fa(ST+1)+" از "+fa(STEPS.length);
+ $("wt").textContent=title; $("ws").textContent="مرحله‌ی "+fa(ST+1)+" از "+fa(WSTEPS);
  var sm=$("wsum"); clr(sm); var ch=[];
  if(S.plan&&D&&D.rates&&D.rates[S.plan]) ch.push(["⭐",planLabel(S.plan)]);
  if(S.ins) ch.push(["🎼",S.ins]);
@@ -263,27 +286,52 @@ function r3(b){
   if(!/^09\d{9}$/.test(ph)){ er.textContent="شماره را مثل 09123456789 وارد کنید."; return; }
   S.name=name; S.phone=ph; S.birth=$("kf-birth")?en($("kf-birth").value).trim():""; S.hp=$("website").value; go(4); };
 }
-/* ۵) تایید نهایی */
+/* ۵) پرداخت (مثل کیوسک) */
 function row(ic,l,v){ if(!v) return null; var r=el("div","pay-summary-row"); r.appendChild(el("span","lbl",ic+" "+l)); r.appendChild(el("span","val",v)); return r; }
 function summaryCard(){
  var c=el("div","pay-glass-card"); c.appendChild(el("div","pay-card-title","📋 خلاصه ثبت‌نام شما"));
  [row("👤","نام هنرجو",S.name),row("🎸","ساز انتخابی",S.ins),row("🎓","استاد",S.teacher),
   row("🕐",S.mode==="slot"?"روز و ساعت کلاس":(S.mode==="plain"?"روز و ساعت دلخواه":"روز و ساعتِ درخواستی"),slotTxt()),
   row("⭐","نوع دوره",S.plan?planLabel(S.plan):"")].forEach(function(r){ if(r) c.appendChild(r); });
- if(S.plan&&D&&D.rates[S.plan]){ var t=el("div","pay-total-row"); t.appendChild(el("span",null,"💰 شهریه")); t.appendChild(el("span","pay-total-amount",money(D.rates[S.plan].price))); c.appendChild(t); }
+ if(S.plan&&D&&D.rates&&D.rates[S.plan]){ var t=el("div","pay-total-row"); t.appendChild(el("span",null,"💰 شهریه")); t.appendChild(el("span","pay-total-amount",money(D.rates[S.plan].price))); c.appendChild(t); }
  if(S.mode==="wait"||S.mode==="wish") c.appendChild(row("📌","وضعیت","در لیست انتظار")); return c;
 }
 function r4(b){
- drawTop("تایید نهایی"); b.appendChild(summaryCard());
- b.appendChild(el("div","note2",S.mode==="slot"?"این ساعت پیشنهادی است و هنوز رزرو نشده. همکاران آموزشگاه پس از بررسی، زمانِ قطعی را با شما هماهنگ می‌کنند. پرداخت شهریه در آموزشگاه انجام می‌شود.":"همکاران آموزشگاه پس از بررسی با شما هماهنگ می‌کنند. پرداخت شهریه در آموزشگاه انجام می‌شود."));
+ drawTop("پرداخت");
+ var price=(S.plan&&D&&D.rates&&D.rates[S.plan])?money(D.rates[S.plan].price):"—";
+ if(!hasPay()){
+  b.appendChild(summaryCard());
+  b.appendChild(el("div","note2","پرداخت شهریه در آموزشگاه انجام می‌شود. همکاران آموزشگاه پس از بررسی با شما هماهنگ می‌کنند."));
+  var e0=el("div","err"); e0.id="kf-err2"; b.appendChild(e0); setNext("ثبتِ درخواست",true); $("bNext").onclick=submit; return;
+ }
+ var nt=el("div","pay-notice"); nt.appendChild(el("div","pay-notice-title","توجه:"));
+ nt.appendChild(el("p",null,"برای حفظ برنامه زمان‌بندی کلاس خود، یک جلسه پیش از اتمام جلسات جهت ثبت‌نام اقدام فرمایید. در غیر اینصورت لطفاً جهت تعیین مجدد زمان‌بندی کلاس با آموزشگاه تماس حاصل فرمایید."));
+ nt.appendChild(el("p",null,"غیبت هنرجویان به هر دلیلی که باشد از طرف موسسه موجه محسوب نمی‌شود و پس از ثبت‌نام شهریه به هیچ وجه مسترد نمی‌گردد."));
+ nt.appendChild(el("p","pay-notice-strong","« کلیه کلاس‌ها در ایام تعطیلات رسمی طبق برنامه آموزشی برقرار می‌باشد »")); b.appendChild(nt);
+ var cd=el("div","pay-gl"); cd.appendChild(el("div","pay-card-title","💳 اطلاعات کارت آموزشگاه"));
+ var bv=el("div","pay-bank-visual"); bv.appendChild(el("div","pay-bank-chip")); bv.appendChild(el("div","pay-card-number",fa(D.accountNumber)));
+ if(D.accountHolder){ var h=el("div","pay-card-holder","به نام"); h.appendChild(el("b",null,D.accountHolder)); bv.appendChild(h); }
+ cd.appendChild(bv);
+ var ins=el("div","pay-card-instruction"); ins.appendChild(el("span",null,"🏦")); ins.appendChild(el("span",null,"پرداخت از طریق اپلیکیشن بانک، اینترنت بانک یا دستگاه خودپرداز (ATM)")); cd.appendChild(ins);
+ cd.appendChild(el("div","pay-card-receipt",D.receiptContactNumber?("لطفاً پس از واریز شهریه، رسید را از طریق اپلیکیشن واتساپ و یا بله به شماره "+fa(D.receiptContactNumber)+" ارسال فرمایید."):"لطفاً پس از واریز شهریه، رسید را به آموزشگاه ارسال فرمایید."));
+ b.appendChild(cd);
+ var sm=el("div","pay-gl"); sm.appendChild(el("div","pay-card-title","📋 خلاصه ثبت‌نام شما"));
+ [row("👤","نام هنرجو",S.name),row("🎸","ساز انتخابی",S.ins),row("🎓","استاد",S.teacher),
+  row("🕐",S.mode==="slot"?"روز و ساعت":"روز و ساعتِ درخواستی",slotTxt()),row("💰","شهریه (شامل هزینه ثبت‌نام)",price)].forEach(function(r){ if(r) sm.appendChild(r); });
+ var tt=el("div","pay-total-row"); tt.appendChild(el("span","lbl","💼 جمع کل")); tt.appendChild(el("span","pay-total-amount",price)); sm.appendChild(tt); b.appendChild(sm);
+ var cf=el("label","pay-confirm-row"+(S.paid?" checked":"")), cb=el("span","pay-checkbox"+(S.paid?" checked":""),S.paid?"✓":""); cf.id="payConf"; cf.appendChild(cb); cf.appendChild(el("span",null,"پرداخت شد"));
+ cf.onclick=function(){ S.paid=!S.paid; cf.classList.remove("shake"); cf.classList.toggle("checked",S.paid); cb.classList.toggle("checked",S.paid); cb.textContent=S.paid?"✓":""; setNext("ثبتِ درخواست",S.paid); };
+ b.appendChild(cf);
  var er=el("div","err"); er.id="kf-err2"; b.appendChild(er);
- setNext("ثبتِ درخواست",true);
- $("bNext").onclick=submit;
+ setNext("ثبتِ درخواست",S.paid);
+ $("bNext").onclick=function(){ if(!S.paid){ cf.classList.remove("shake"); void cf.offsetWidth; cf.classList.add("shake"); try{ cf.scrollIntoView({block:"center",behavior:"smooth"}); }catch(e){} return; } submit(); };
+ /* اسکرولِ خودکار به پایینِ صفحه تا کارت و «پرداخت شد» دیده شود */
+ setTimeout(function(){ try{ window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"}); }catch(e){} },700);
 }
 function submit(){
  var nb=$("bNext"), er=$("kf-err2"); if(S.hp) return; if(API.indexOf("PUT_")==0){ er.textContent="فرم هنوز راه‌اندازی نشده است."; return; }
  var pre=S.mode==="slot"?(S.teacher+" | ساعتِ انتخابی از ساعت‌های خالی (قطعی نیست)"):(S.mode==="wish"?"لیست انتظار — روز/ساعت‌های دلخواه":(S.mode==="wait"?"لیست انتظار — ساعتِ خالی نبود":""));
- var pl=S.plan?("دوره: "+planLabel(S.plan)):""; var note=[pre,pl].filter(Boolean).join(" | ").slice(0,500);
+ var pl=S.plan?("دوره: "+planLabel(S.plan)):""; var pd=(hasPay()&&S.paid)?"پرداخت کارت‌به‌کارت: اعلام شد (رسید ارسال می‌شود)":""; var note=[pre,pl,pd].filter(Boolean).join(" | ").slice(0,500);
  nb.disabled=true; nb.textContent="در حال ارسال…";
  call({a:"reg",name:S.name,phone:S.phone,instrument:S.ins,day:S.day,time:S.time,birth:S.birth||"",note:note})
  .then(function(r){ if(!r.ok) throw 0; showDone(); })
