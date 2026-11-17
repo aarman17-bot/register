@@ -7567,7 +7567,7 @@ var teacherLabel = rosterName(d.dayRoster, student.teacherId) || dayLabel(studen
 var reason = this._teacherCoordSmsText(student, isFirst);
 this.gateOrShowPrompt("call", { name: teacherLabel, teacherId: student.teacherId, studentId: student.id, phone: teacherEntry.phone, reason: reason });
 },
-closeCallPrompt: function(){ this._handleCoordDismiss(); this.callPrompt = null; this.render(); },
+closeCallPrompt: function(){ this.resolveCoordPrompt("call"); },
 //@@APP-STUDENT-DELETE-RENEW  deleteStudent, not-coming-back, renew picker, renewStudent
 deleteStudent: function(id){
 if(!this.can('students.delete')) return;
@@ -13582,7 +13582,7 @@ return [r.id, r.date, r.time, !!r.completed, r.notificationEnabled===false];
 }));
 if(_newRemindersFp !== _prevRemindersFp) syncNativeReminders();
 }catch(e){ console.warn("applyServerPayload: syncNativeReminders (post-sync) failed:", e); }
-if(this.currentUser){
+if(this.currentUser && !window.__WEB_TEACHER){
 var still = this.data.users.find(function(u){ return u.id===self.currentUser.id && u.active; });
 if(!still){ this.currentUser = null; clearSession(); }
 }
@@ -25641,7 +25641,18 @@ App.resolveSession();
  var W=null; try{ W=JSON.parse(sessionStorage.getItem("acWebTeacher")||"null"); }catch(e){}
  if(!W||!W.user||!W.payload){ try{ location.replace("teacher.html"); }catch(e){} return; }
  try{ App.applyServerPayload(W.payload, W.v||1); }catch(e){ try{ window.__academyShowError("خطا در بارگذاری داده: "+e.message); }catch(e2){} }
- setInterval(function(){ if(!App.currentUser){ try{ sessionStorage.removeItem("acWebTeacher"); }catch(e){} location.replace("teacher.html"); } },1500);
+ var _out=false, _bad=0;
+  try{ var _lo=App.logout; App.logout=function(){ _out=true; return _lo.apply(this,arguments); }; }catch(e){}
+  setTimeout(function(){ try{ if(App.currentUser) sessionStorage.removeItem("acWebRetry"); }catch(e){} },20000);
+  setInterval(function(){
+   if(App.currentUser){ _bad=0; return; }
+   if(++_bad<3) return;
+   try{ sessionStorage.removeItem("acWebTeacher"); }catch(e){}
+   if(_out){ try{ localStorage.removeItem("acWebKeep"); }catch(e){} location.replace("teacher.html#out"); return; }
+   var rc=0; try{ rc=+(sessionStorage.getItem("acWebRetry")||0); }catch(e){}
+   if(rc>=2){ try{ localStorage.removeItem("acWebKeep"); sessionStorage.removeItem("acWebRetry"); }catch(e){} location.replace("teacher.html#out"); }
+   else { try{ sessionStorage.setItem("acWebRetry",String(rc+1)); }catch(e){} location.replace("teacher.html"); }
+  },1500);
  var WEBURL=W.url, NM=W.user.name, EK="acWebOut:"+NM, dirty=false, busyS=false, base={}, baseSig={}, baseTomb=W.payload.deletedAttendance||{}, E={att:{},sigs:{},tomb:{}};
  function b64e(u){var s="",i;for(i=0;i<u.length;i+=8192)s+=String.fromCharCode.apply(null,u.subarray(i,i+8192));return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");}
  function enc(o){var u=new TextEncoder().encode(JSON.stringify(o)); if(!window.CompressionStream) return Promise.resolve("p"+b64e(u)); var s=new CompressionStream("gzip"),w=s.writable.getWriter(); w.write(u); w.close(); return new Response(s.readable).arrayBuffer().then(function(b){ return "g"+b64e(new Uint8Array(b)); });}

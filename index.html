@@ -50,6 +50,35 @@ input,select,textarea{border-color:rgba(212,175,55,.38);background:rgba(18,14,7,
 input:focus,select:focus,textarea:focus{border-color:#F6D77A;box-shadow:0 0 0 3px rgba(246,215,122,.16)}
 .go{background:linear-gradient(135deg,#B8860B 0%,#F6D77A 38%,#FFF3C4 52%,#D4AF37 75%,#B8860B 100%);box-shadow:0 6px 22px rgba(212,175,55,.35),inset 0 1px 0 rgba(255,255,255,.5)}
 .ok h2{color:#F6D77A}
+
+/* ---- مراحل ثبت‌نام ---- */
+.stepper{display:flex;align-items:center;justify-content:center;gap:6px;margin:0 0 16px;font-size:12.5px;color:var(--soft)}
+.stepper .st{display:flex;align-items:center;gap:6px;opacity:.55;white-space:nowrap}
+.stepper .st b{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;border:1.5px solid var(--line);font-size:12px}
+.stepper .st.on{opacity:1;color:var(--gold2);font-weight:800}
+.stepper .st.on b{background:linear-gradient(135deg,#F6D77A,#D4AF37);color:#1a1205;border-color:#F6D77A}
+.stepper .st.done{opacity:1}.stepper .st.done b{border-color:var(--gold);color:var(--gold2)}
+.stepper i{flex:1;max-width:34px;height:1px;background:var(--line)}
+.qh{margin:2px 0 14px;font-size:19px;text-align:center;color:var(--gold2)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.opt{padding:16px 8px;border-radius:16px;border:1.5px solid var(--line);background:#120F0A;color:var(--ink);font:inherit;font-size:16px;font-weight:700;cursor:pointer}
+.opt:active,.opt.sel{border-color:var(--gold2);background:#2a210f;box-shadow:0 0 14px rgba(246,215,122,.2)}
+.ld,.empty{grid-column:1/-1;text-align:center;color:var(--soft);padding:18px 6px;font-size:14px}
+.back{background:none;border:1px solid var(--line);color:var(--soft);border-radius:10px;padding:6px 12px;font:inherit;font-size:13px;margin-bottom:12px;cursor:pointer}
+.dcard{border:1.5px solid rgba(212,175,55,.35);border-radius:16px;padding:12px;margin:0 0 12px;background:#120F0A}
+.dhead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;font-weight:800;color:var(--gold2)}
+.dhead small{color:var(--soft);font-weight:600;font-size:13px}
+.slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.slot{padding:12px 4px;border-radius:12px;border:1.5px solid var(--line);background:#1B1712;color:var(--ink);font:inherit;font-size:17px;font-weight:800;cursor:pointer;direction:ltr}
+.slot:active{border-color:var(--gold2);background:#2a210f}
+.alt{width:100%;padding:13px;border-radius:14px;border:1.5px dashed rgba(212,175,55,.55);background:none;color:var(--gold2);font:inherit;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px}
+.chip{padding:10px 14px;border-radius:999px;border:1.5px solid var(--line);background:#120F0A;color:var(--ink);font:inherit;font-size:15px;cursor:pointer}
+.chip.sel{border-color:var(--gold2);background:#2a210f;color:var(--gold2);font-weight:800}
+.hd{margin:8px 0 2px;font-size:14px;color:var(--soft)}
+.sum{background:#120F0A;border:1.5px solid rgba(212,175,55,.4);border-radius:14px;padding:12px 14px;margin:0 0 14px;font-size:14.5px}
+.sum b{color:var(--gold2)}.sum small{display:block;color:var(--soft);margin-top:4px;font-size:12.5px}
+.sum button{float:left;background:none;border:0;color:var(--gold2);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer}
 </style>
 </head>
 <body>
@@ -58,20 +87,27 @@ input:focus,select:focus,textarea:focus{border-color:#F6D77A;box-shadow:0 0 0 3p
 
 <!-- ثبت‌نام -->
 <div id="p1" class="card">
+ <div class="stepper" id="stp"><span class="st on"><b>۱</b>ساز</span><i></i><span class="st"><b>۲</b>روز و ساعت</span><i></i><span class="st"><b>۳</b>مشخصات</span></div>
+
+ <section id="sA"><h2 class="qh">چه سازی را دوست دارید؟</h2><div class="grid" id="insGrid"><div class="ld">در حال دریافت…</div></div></section>
+
+ <section id="sB" class="hide"><button class="back" type="button" id="bkB">→ تغییر ساز</button><h2 class="qh" id="bTitle"></h2><div id="bBody"></div></section>
+
+ <section id="sW" class="hide"><button class="back" type="button" id="bkW">→ بازگشت</button><h2 class="qh">روز و ساعتِ مناسبِ شما</h2>
+  <div class="hd">روزها (چندتا می‌توانید انتخاب کنید)</div><div class="chips" id="wDays"></div>
+  <div class="hd">ساعت‌ها (اختیاری؛ خالی = هر ساعتی)</div><div class="chips" id="wTimes"></div>
+  <div class="err" id="errW"></div><button class="go" type="button" id="wGo">ادامه</button></section>
+
+ <section id="sC" class="hide"><div class="sum" id="sum"></div>
  <form id="f" novalidate>
   <label><span>نام و نام خانوادگی *</span><input id="name" autocomplete="name"></label>
   <label><span>شماره موبایل *</span><input id="phone" type="tel" inputmode="numeric" dir="ltr" placeholder="09xxxxxxxxx" autocomplete="tel"></label>
-  <label><span>سازِ موردِ علاقه</span><select id="instrument"><option value="">— انتخاب کنید —</option><option>گیتار</option><option>پیانو</option><option>ویولن</option><option>سه‌تار</option><option>تار</option><option>سنتور</option><option>تنبک</option><option>آواز</option><option>فلوت / نی</option><option>درامز</option><option>هنوز مطمئن نیستم</option></select></label>
-  <div class="row">
-   <label><span>روزِ دلخواه</span><select id="day"><option value="">فرقی ندارد</option><option>شنبه</option><option>یکشنبه</option><option>دوشنبه</option><option>سه‌شنبه</option><option>چهارشنبه</option><option>پنجشنبه</option></select></label>
-   <label><span>ساعتِ دلخواه</span><select id="time"><option value="">فرقی ندارد</option><option>صبح</option><option>ظهر</option><option>عصر</option><option>شب</option></select></label>
-  </div>
   <label><span>تاریخ تولد (اختیاری)</span><input id="birth" inputmode="numeric" dir="ltr" placeholder="1385/05/12"></label>
   <label><span>توضیحات (اختیاری)</span><textarea id="note" rows="2"></textarea></label>
   <div class="hp"><input id="website" tabindex="-1" autocomplete="off"></div>
   <div class="err" id="err1"></div>
   <button class="go" id="b1" type="submit">ثبتِ درخواست</button>
- </form>
+ </form></section>
 </div>
 <div id="done" class="card ok hide"><b>✅</b><h2>درخواستِ شما ثبت شد</h2><p>همکارانِ آموزشگاه به‌زودی با شما هماهنگ می‌کنند.</p></div>
 
@@ -87,6 +123,75 @@ var en = function(s){ return String(s||"").replace(/[۰-۹]/g,function(c){return
 function call(o){ return fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(o)}).then(function(r){return r.json();}); }
 function tab(){ $("p1").classList.add("hide"); $("done").classList.remove("hide"); }
 
+var D=null, S={ins:"",gi:-1,day:"",time:"",teacher:"",mode:"",wd:[],wt:[]};
+var FB=["گیتار","پیانو","ویولن","سه‌تار","تار","سنتور","تنبک","آواز","فلوت / نی","درامز","هنوز مطمئن نیستم"];
+var DAYS=["شنبه","یکشنبه","دوشنبه","سه‌شنبه","چهارشنبه","پنجشنبه"], PARTS=["صبح","ظهر","عصر","شب"];
+function el(t,c,x){ var e=document.createElement(t); if(c) e.className=c; if(x!=null) e.textContent=x; return e; }
+function clr(n){ while(n.firstChild) n.removeChild(n.firstChild); }
+function teach(n){ n=String(n||"").trim(); if(!n) return ""; return /^(استاد|خانم|آقای|دکتر)/.test(n)?n:"استاد "+n; }
+function setStep(n){ var it=document.querySelectorAll("#stp .st"); for(var i=0;i<it.length;i++){ it[i].className="st"+(i+1===n?" on":(i+1<n?" done":"")); } }
+function show(id){ ["sA","sB","sW","sC"].forEach(function(x){ $(x).classList.toggle("hide",x!==id); }); setStep(id==="sA"?1:(id==="sC"?3:2)); window.scrollTo(0,0); }
+function tSort(a){ return a.slice().sort(); }
+
+/* ساعت‌های خالیِ پیشنهادی از برنامهٔ مدیر؛ اگر نرسید، حالتِ ساده */
+function loadAvail(){
+ var done=false, fin=function(d){ if(done) return; done=true; clearTimeout(to);
+  D=(d&&d.groups&&d.groups.length&&d.at&&(Date.now()-Date.parse(d.at)<86400000))?d:null; renderA(); };
+ var to=setTimeout(function(){ fin(null); },7000);
+ call({a:"avail"}).then(function(r){ fin(r&&r.ok?r.data:null); }).catch(function(){ fin(null); });
+}
+function renderA(){
+ var g=$("insGrid"); clr(g);
+ var names=D?D.groups.map(function(x){ return x.name; }):FB;
+ names.forEach(function(n,i){ var b=el("button","opt",n); b.type="button"; b.onclick=function(){ S={ins:n,gi:i,day:"",time:"",teacher:"",mode:"",wd:[],wt:[]}; renderB(); show("sB"); }; g.appendChild(b); });
+}
+
+function renderB(){
+ $("bTitle").textContent="روز و ساعتِ "+S.ins; var c=$("bBody"); clr(c);
+ if(!D){ /* حالتِ ساده */
+  var l1=el("label"),s1=el("span",null,"روزِ دلخواه"),sd=el("select"); l1.appendChild(s1); l1.appendChild(sd);
+  [""].concat(DAYS).forEach(function(d){ var o=el("option",null,d||"فرقی ندارد"); o.value=d; sd.appendChild(o); });
+  var l2=el("label"),s2=el("span",null,"ساعتِ دلخواه"),st=el("select"); l2.appendChild(s2); l2.appendChild(st);
+  [""].concat(PARTS).forEach(function(d){ var o=el("option",null,d||"فرقی ندارد"); o.value=d; st.appendChild(o); });
+  var go=el("button","go","ادامه"); go.type="button"; go.onclick=function(){ S.day=sd.value; S.time=st.value; S.mode="plain"; goForm(); };
+  c.appendChild(l1); c.appendChild(l2); c.appendChild(go); return; }
+ var g=D.groups[S.gi], any=false;
+ g.days.forEach(function(d){ if(!d.suggest||!d.suggest.length) return; any=true;
+  var card=el("div","dcard"), h=el("div","dhead"); h.appendChild(el("span",null,"📅 "+d.label)); h.appendChild(el("small",null,teach(d.teacher))); card.appendChild(h);
+  var row=el("div","slots"); d.suggest.forEach(function(t){ var b=el("button","slot",fa(t)); b.type="button"; b.onclick=function(){ S.day=d.label; S.time=t; S.teacher=teach(d.teacher); S.mode="slot"; goForm(); }; row.appendChild(b); });
+  card.appendChild(row); c.appendChild(card); });
+ if(!any){ c.appendChild(el("div","empty","در حال حاضر برای این ساز زمانِ خالی نداریم. می‌توانید در لیست انتظار ثبت‌نام کنید؛ به‌محضِ آزاد شدنِ زمانِ مناسب با شما هماهنگ می‌کنیم.")); }
+ var alt=el("button","alt",any?"این ساعت‌ها مناسب نیست؟ روز و ساعتِ دیگری می‌خواهم":"ثبت‌نام در لیست انتظار"); alt.type="button"; alt.onclick=function(){ S.any=any; renderW(); show("sW"); }; c.appendChild(alt);
+}
+
+function renderW(){
+ var g=D.groups[S.gi], dc=$("wDays"), tc=$("wTimes"); clr(dc); clr(tc); $("errW").textContent="";
+ var seen={}, days=[]; g.days.forEach(function(d){ if(!seen[d.label]){ seen[d.label]=1; days.push(d.label); } });
+ function times(){ var set={}, pick=S.wd.length?S.wd:days; g.days.forEach(function(d){ if(pick.indexOf(d.label)>-1) (d.open||[]).forEach(function(t){ set[t]=1; }); }); return tSort(Object.keys(set)); }
+ function drawT(){ clr(tc); var ts=times(); S.wt=S.wt.filter(function(t){ return ts.indexOf(t)>-1; });
+  ts.forEach(function(t){ var b=el("button","chip"+(S.wt.indexOf(t)>-1?" sel":""),fa(t)); b.type="button"; b.style.direction="ltr";
+   b.onclick=function(){ var i=S.wt.indexOf(t); if(i>-1) S.wt.splice(i,1); else S.wt.push(t); b.classList.toggle("sel"); }; tc.appendChild(b); }); }
+ days.forEach(function(d){ var b=el("button","chip"+(S.wd.indexOf(d)>-1?" sel":""),d); b.type="button";
+  b.onclick=function(){ var i=S.wd.indexOf(d); if(i>-1) S.wd.splice(i,1); else S.wd.push(d); b.classList.toggle("sel"); drawT(); }; dc.appendChild(b); });
+ drawT();
+}
+$("wGo").onclick=function(){ if(!S.wd.length){ $("errW").textContent="حداقل یک روز را انتخاب کنید."; return; }
+ S.day=S.wd.join("، "); S.time=tSort(S.wt).join("، "); S.teacher=""; S.mode=S.any?"wish":"wait"; goForm(); };
+$("bkB").onclick=function(){ show("sA"); };
+$("bkW").onclick=function(){ show("sB"); };
+
+function goForm(){
+ var sm=$("sum"); clr(sm); var ch=el("button",null,"تغییر"); ch.type="button"; ch.onclick=function(){ show("sB"); };
+ sm.appendChild(ch);
+ var t=[]; t.push(S.ins); if(S.day) t.push(S.day);
+ if(S.mode==="slot") t.push("ساعت "+fa(S.time)); else if(S.time) t.push("ساعت: "+S.time.split("، ").map(fa).join("، "));
+ if(S.teacher) t.push(S.teacher);
+ var b=el("b",null,t.join(" · ")); sm.appendChild(b);
+ var m=S.mode==="slot"?"این ساعت پیشنهادی است؛ زمانِ قطعی را همکاران آموزشگاه با شما هماهنگ می‌کنند.":(S.mode==="wish"||S.mode==="wait"?"درخواستِ شما در لیست انتظار ثبت می‌شود و با آزاد شدنِ زمانِ مناسب با شما تماس می‌گیریم.":"");
+ if(m) sm.appendChild(el("small",null,m));
+ show("sC");
+}
+
 /* ثبت‌نام */
 $("f").onsubmit=function(e){ e.preventDefault(); var er=$("err1"); er.textContent="";
  if($("website").value) return;
@@ -95,11 +200,14 @@ $("f").onsubmit=function(e){ e.preventDefault(); var er=$("err1"); er.textConten
  if(name.length<3){ er.textContent="نام و نام خانوادگی را وارد کنید."; return; }
  if(!/^09\d{9}$/.test(ph)){ er.textContent="شماره را مثل 09123456789 وارد کنید."; return; }
  if(API.indexOf("PUT_")==0){ er.textContent="فرم هنوز راه‌اندازی نشده است."; return; }
+ var pre=S.mode==="slot"?(S.teacher+" | ساعتِ انتخابی از ساعت‌های خالی (قطعی نیست)"):(S.mode==="wish"?"لیست انتظار — روز/ساعت‌های دلخواه":(S.mode==="wait"?"لیست انتظار — ساعتِ خالی نبود":""));
+ var nt=$("note").value.trim(), note=(pre+(pre&&nt?" | ":"")+nt).slice(0,500);
  $("b1").disabled=true; $("b1").textContent="در حال ارسال…";
- call({a:"reg",name:name,phone:ph,instrument:$("instrument").value,day:$("day").value,time:$("time").value,birth:en($("birth").value).trim(),note:$("note").value.trim().slice(0,500)})
+ call({a:"reg",name:name,phone:ph,instrument:S.ins,day:S.day,time:S.time,birth:en($("birth").value).trim(),note:note})
  .then(function(r){ if(!r.ok) throw 0; $("done").dataset.d="1"; tab(1); window.scrollTo(0,0); })
  .catch(function(){ er.textContent="ارسال نشد؛ اینترنت را بررسی و دوباره تلاش کنید."; $("b1").disabled=false; $("b1").textContent="ثبتِ درخواست"; }); };
 
+loadAvail();
 </script>
 </body>
 </html>
