@@ -194,11 +194,29 @@ function drawTop(title){
 }
 function setNext(txt,ok){ var b=$("bNext"); b.textContent=txt; b.classList.toggle("locked",!ok); b.classList.remove("hide"); }
 
+/* اسکرولِ خودکارِ آرومِ صفحه (عینِ کیوسک): ۶۰ ثانیه، ease-in-out؛ هر لمس/اسکرولِ کاربر لغوش می‌کند */
+var _scrollTok=0, _scrollStop=null;
+function startAutoScroll(){
+ if(_scrollStop) _scrollStop();
+ var tok=++_scrollTok, cancelled=false, EVS=["touchstart","wheel","pointerdown","keydown"];
+ function stop(){ cancelled=true; EVS.forEach(function(e){ document.removeEventListener(e,stop,true); }); if(_scrollStop===stop) _scrollStop=null; }
+ _scrollStop=stop; EVS.forEach(function(e){ document.addEventListener(e,stop,{passive:true,capture:true}); });
+ var dur=60000, t0=null, y0=0, span=0;
+ function step(ts){
+  if(cancelled||tok!==_scrollTok) return;
+  if(!t0){ t0=ts; y0=window.pageYOffset||0; var max=Math.max(document.documentElement.scrollHeight,document.body.scrollHeight)-window.innerHeight; span=max-y0; if(span<=4){ stop(); return; } }
+  var t=Math.min(1,(ts-t0)/dur), e=t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+  window.scrollTo(0,y0+span*e);
+  if(t<1) requestAnimationFrame(step); else stop();
+ }
+ requestAnimationFrame(step);
+}
 function go(n){ ST=n; S.sub=""; render(); window.scrollTo(0,0); }
 function nextStep(n){ if(n===2&&!hasPlans()) return 3; return n; }
 function prevStep(n){ if(n===2&&!hasPlans()) return 1; return n; }
 
 function render(){
+ if(_scrollStop) _scrollStop();
  drawStepper(); var b=$("wb"); clr(b); $("bBack").classList.toggle("hide",ST===0 && !S.sub);
  $("bNext").classList.remove("hide");
  if(ST===0) return r0(b);
@@ -251,7 +269,7 @@ function rW(b){
  function drawT(){ clr(tc); var ts=times(); S.wt=S.wt.filter(function(t){ return ts.indexOf(t)>-1; });
   ts.forEach(function(t){ var c=el("button","chip"+(S.wt.indexOf(t)>-1?" sel":""),fa(t)); c.type="button"; c.style.direction="ltr"; c.onclick=function(){ var i=S.wt.indexOf(t); if(i>-1) S.wt.splice(i,1); else S.wt.push(t); c.classList.toggle("sel"); }; tc.appendChild(c); }); }
  days.forEach(function(d){ var c=el("button","chip"+(S.wd.indexOf(d)>-1?" sel":""),d); c.type="button"; c.onclick=function(){ var i=S.wd.indexOf(d); if(i>-1) S.wd.splice(i,1); else S.wd.push(d); c.classList.toggle("sel"); drawT(); setNext("ادامه",S.wd.length>0); }; dc.appendChild(c); });
- drawT(); setNext("ادامه",S.wd.length>0);
+ drawT(); setNext("ادامه",S.wd.length>0); startAutoScroll();
  $("bNext").onclick=function(){ if(!S.wd.length){ er.textContent="حداقل یک روز را انتخاب کنید."; return; } S.day=S.wd.join("، "); S.time=S.wt.slice().sort().join("، "); S.teacher=""; S.mode=S.any?"wish":"wait"; go(nextStep(2)); };
 }
 /* ۳) نوع دوره */
@@ -325,8 +343,7 @@ function r4(b){
  var er=el("div","err"); er.id="kf-err2"; b.appendChild(er);
  setNext("ثبتِ درخواست",S.paid);
  $("bNext").onclick=function(){ if(!S.paid){ cf.classList.remove("shake"); void cf.offsetWidth; cf.classList.add("shake"); try{ cf.scrollIntoView({block:"center",behavior:"smooth"}); }catch(e){} return; } submit(); };
- /* اسکرولِ خودکار به پایینِ صفحه تا کارت و «پرداخت شد» دیده شود */
- setTimeout(function(){ try{ window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"}); }catch(e){} },700);
+ startAutoScroll();
 }
 function submit(){
  var nb=$("bNext"), er=$("kf-err2"); if(S.hp) return; if(API.indexOf("PUT_")==0){ er.textContent="فرم هنوز راه‌اندازی نشده است."; return; }
