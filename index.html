@@ -118,6 +118,12 @@ label.l{display:block;font-size:13.5px;color:var(--ink-soft);margin:8px 4px 2px}
 .pay-confirm-row.shake{animation:shk .5s;border-color:var(--brick)}
 .pay-checkbox{width:32px;height:32px;flex-shrink:0;border-radius:9px;border:2px solid var(--primary);display:flex;align-items:center;justify-content:center;font-size:20px;color:#1B1204}
 .pay-checkbox.checked{background:linear-gradient(180deg,#F0C868,#B8862C);box-shadow:0 0 12px rgba(212,160,60,.5)}
+.pay-steps{border:1.5px solid var(--line);border-radius:18px;padding:12px 14px;margin:2px 0 12px;background:rgba(27,23,18,.55)}
+.pay-steps-t{font-weight:800;color:var(--amber);font-size:15px;margin-bottom:6px}
+.pay-step{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.9;color:var(--ink-soft);padding:3px 0}
+.pay-step-n{flex:0 0 24px;height:24px;border-radius:50%;background:var(--primary-bg);border:1.5px solid var(--primary);color:var(--amber);font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:3px}
+.pay-confirm-row.pulse{animation:payPulse 1.8s ease-in-out infinite;border-color:var(--primary)}
+@keyframes payPulse{0%,100%{box-shadow:0 0 0 0 rgba(240,200,104,0)}50%{box-shadow:0 0 0 6px rgba(240,200,104,.28)}}
 @keyframes shk{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
 /* موفقیت */
 .success{max-width:480px;margin:10px auto 0;padding:22px 16px 26px;text-align:center;border:1.5px solid rgba(212,175,55,.55);border-radius:22px;background:var(--cream)}
@@ -137,7 +143,7 @@ label.l{display:block;font-size:13.5px;color:var(--ink-soft);margin:8px 4px 2px}
  <div class="wz-nav"><div class="wz-btns"><button type="button" class="wz-back" id="bBack">→ بازگشت</button><button type="button" class="wz-next" id="bNext">ادامه</button></div><div class="wz-stepper" id="stp"></div></div>
 </main>
 <section class="success hide" id="done"></section>
-<div class="foot">اطلاعاتِ شما فقط برای هماهنگیِ آموزشگاه استفاده می‌شود.<br><span style="opacity:.55">نسخهٔ صفحه: ۶</span></div>
+<div class="foot">اطلاعاتِ شما فقط برای هماهنگیِ آموزشگاه استفاده می‌شود.<br><span style="opacity:.55">نسخهٔ صفحه: ۷</span></div>
 
 <script>
 var API = "https://script.google.com/macros/s/AKfycbxLF0ZX8f2cnOAkdh8OjGAMwYilsGdrqMslVVgL_ipTWOfDe5s0Xz-tbSFUbl695EdT/exec";
@@ -319,7 +325,7 @@ function r4(b){
  var price=(S.plan&&D&&D.rates&&D.rates[S.plan])?money(D.rates[S.plan].price):"—";
  if(!hasPay()){
   b.appendChild(summaryCard());
-  b.appendChild(el("div","note2","پرداخت شهریه در آموزشگاه انجام می‌شود. همکاران آموزشگاه پس از بررسی با شما هماهنگ می‌کنند."));
+  b.appendChild(el("div","note2","پرداخت شهریه در آموزشگاه انجام می‌شود. پس از ثبت پرداخت، پیامک تأیید ثبت‌نام برای شما ارسال خواهد شد."));
   var e0=el("div","err"); e0.id="kf-err2"; b.appendChild(e0); setNext("ثبتِ درخواست",true); $("bNext").onclick=submit; return;
  }
  var nt=el("div","pay-notice"); nt.appendChild(el("div","pay-notice-title","توجه:"));
@@ -337,11 +343,15 @@ function r4(b){
  [row("👤","نام هنرجو",S.name),row("🎸","ساز انتخابی",S.ins),row("🎓","استاد",S.teacher),
   row("🕐",S.mode==="slot"?"روز و ساعت":"روز و ساعتِ درخواستی",slotTxt()),row("💰","شهریه (شامل هزینه ثبت‌نام)",price)].forEach(function(r){ if(r) sm.appendChild(r); });
  var tt=el("div","pay-total-row"); tt.appendChild(el("span","lbl","💼 جمع کل")); tt.appendChild(el("span","pay-total-amount",price)); sm.appendChild(tt); b.appendChild(sm);
- var cf=el("label","pay-confirm-row"+(S.paid?" checked":"")), cb=el("span","pay-checkbox"+(S.paid?" checked":""),S.paid?"✓":""); cf.id="payConf"; cf.appendChild(cb); cf.appendChild(el("span",null,"پرداخت شد"));
- cf.onclick=function(){ S.paid=!S.paid; cf.classList.remove("shake"); cf.classList.toggle("checked",S.paid); cb.classList.toggle("checked",S.paid); cb.textContent=S.paid?"✓":""; setNext("ثبتِ درخواست",S.paid); };
+ var stp=el("div","pay-steps"); stp.appendChild(el("div","pay-steps-t","مراحل پرداخت"));
+ [["۱","مبلغ شهریه را به شمارهٔ کارت بالا واریز کنید."],["۲","رسید را از طریق واتساپ یا بله ارسال کنید."],["۳","گزینهٔ «پرداخت شد» را بزنید، سپس «ثبتِ درخواست» را فشار دهید."]].forEach(function(x){ var r=el("div","pay-step"); r.appendChild(el("span","pay-step-n",x[0])); r.appendChild(el("span",null,x[1])); stp.appendChild(r); });
+ b.appendChild(stp);
+ var payLbl=function(){ return S.paid?"ثبتِ درخواست":"«پرداخت شد» را بزنید"; };
+ var cf=el("label","pay-confirm-row"+(S.paid?" checked":" pulse")), cb=el("span","pay-checkbox"+(S.paid?" checked":""),S.paid?"✓":""); cf.id="payConf"; cf.appendChild(cb); cf.appendChild(el("span",null,"پرداخت شد"));
+ cf.onclick=function(){ S.paid=!S.paid; cf.classList.remove("shake"); cf.classList.toggle("pulse",!S.paid); cf.classList.toggle("checked",S.paid); cb.classList.toggle("checked",S.paid); cb.textContent=S.paid?"✓":""; setNext(payLbl(),S.paid); };
  b.appendChild(cf);
  var er=el("div","err"); er.id="kf-err2"; b.appendChild(er);
- setNext("ثبتِ درخواست",S.paid);
+ setNext(payLbl(),S.paid);
  $("bNext").onclick=function(){ if(!S.paid){ cf.classList.remove("shake"); void cf.offsetWidth; cf.classList.add("shake"); try{ cf.scrollIntoView({block:"center",behavior:"smooth"}); }catch(e){} return; } submit(); };
  startAutoScroll();
 }
@@ -361,7 +371,7 @@ function showDone(){
  d.appendChild(bd);
  d.appendChild(el("h1","success-title",wait?"شما در لیست انتظار قرار گرفتید":"درخواست ثبت‌نام شما ثبت شد"));
  var o=el("div","success-orn"); o.appendChild(el("i")); d.appendChild(o);
- d.appendChild(el("p","success-sub",wait?"به‌محض آزاد شدن زمان مناسب، مراتب به شما اطلاع داده می‌شود. از اعتماد شما سپاسگزاریم.":"از اعتماد شما به آموزشگاه موسیقی ایران سپاسگزاریم. همکاران آموزشگاه به‌زودی برای هماهنگی نهایی با شما تماس می‌گیرند."));
+ d.appendChild(el("p","success-sub",wait?"به‌محض آزاد شدن زمان مناسب، از طریق پیامک به شما اطلاع داده می‌شود. از اعتماد شما سپاسگزاریم.":(hasPay()?"پس از ثبت پرداخت شما در سیستم آموزشگاه، پیامک تأیید ثبت‌نام برای شما ارسال خواهد شد. از اعتماد شما سپاسگزاریم.":"پس از ثبت پرداخت شهریه در آموزشگاه، پیامک تأیید ثبت‌نام برای شما ارسال خواهد شد. از اعتماد شما سپاسگزاریم.")));
  d.appendChild(summaryCard());
  if(!wait) d.appendChild((function(){ var n=el("div","success-note"); n.appendChild(el("span",null,"🗓️")); n.appendChild(el("span",null,"لطفاً ۱۰ دقیقه پیش از شروع کلاس در آموزشگاه حضور داشته باشید.")); return n; })());
 }
