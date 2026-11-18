@@ -268,7 +268,7 @@ function insIcon(n){
 }
 /* ۱) ساز */
 function r0(b){
- drawTop("چه سازی را دوست دارید؟"); $("bNext").classList.add("hide");
+ drawTop("ساز مورد نظر خود را انتخاب کنید"); $("bNext").classList.add("hide");
  var g=el("div","grid2"); b.appendChild(g);
  var names=D?D.groups.map(function(x){ return x.name; }):(D===undefined?[]:FB);
  if(D===undefined){ g.appendChild(el("div","empty","در حال دریافت…")); return; }
@@ -277,7 +277,7 @@ function r0(b){
 }
 /* ۲) روز و ساعت */
 function r1(b){
- drawTop("روز و ساعتِ "+S.ins);
+ drawTop("روز و ساعت خالی را انتخاب کنید");
  if(!D){ /* حالتِ ساده */
   var l1=el("label","l","روزِ دلخواه"),sd=el("select"); [""].concat(DAYS).forEach(function(d){ var o=el("option",null,d||"فرقی ندارد"); o.value=d; sd.appendChild(o); }); sd.value=S.fbDay;
   var l2=el("label","l","ساعتِ دلخواه"),st=el("select"); [""].concat(PARTS).forEach(function(d){ var o=el("option",null,d||"فرقی ندارد"); o.value=d; st.appendChild(o); }); st.value=S.fbPart;
@@ -301,7 +301,7 @@ function r1(b){
  setNext("ادامه",S.mode==="slot"); $("bNext").onclick=function(){ if(S.mode==="slot") go(nextStep(2)); };
 }
 function rW(b){
- drawTop("روز و ساعتِ مناسبِ شما"); var g=D.groups[S.gi];
+ drawTop("روز و ساعت خالی را انتخاب کنید"); var g=D.groups[S.gi];
  var seen={},days=[]; g.days.forEach(function(d){ if(!seen[d.label]){ seen[d.label]=1; days.push(d.label); } });
  b.appendChild(el("div","hd","روزها (چندتا می‌توانید انتخاب کنید)")); var dc=el("div","chips"); b.appendChild(dc);
  b.appendChild(el("div","hd","ساعت‌ها (اختیاری؛ خالی = هر ساعتی)")); var tc=el("div","chips"); b.appendChild(tc);
@@ -353,7 +353,7 @@ function readBirth(){
  return {v:y.value+"/"+("0"+m.value).slice(-2)+"/"+("0"+d.value).slice(-2),ok:true};
 }
 function r3(b){
- drawTop("مشخصات شما");
+ drawTop("مشخصات خود را وارد کنید");
  b.appendChild(field("kf-name","نام و نام خانوادگی","👤","نام و نام خانوادگی خود را وارد کنید",null,true,null,S.name));
  b.appendChild(field("kf-phone","شماره موبایل","📱","09xxxxxxxxx","tel",true,"numeric",S.phone));
  if(!D||D.askBirth) b.appendChild(birthField(S.birth));
