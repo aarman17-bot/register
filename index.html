@@ -143,7 +143,7 @@ label.l{display:block;font-size:13.5px;color:var(--ink-soft);margin:8px 4px 2px}
  <div class="wz-nav"><div class="wz-btns"><button type="button" class="wz-back" id="bBack">→ بازگشت</button><button type="button" class="wz-next" id="bNext">ادامه</button></div><div class="wz-stepper" id="stp"></div></div>
 </main>
 <section class="success hide" id="done"></section>
-<div class="foot">اطلاعاتِ شما فقط برای هماهنگیِ آموزشگاه استفاده می‌شود.<br><span style="opacity:.55">نسخهٔ صفحه: ۷</span></div>
+<div class="foot">اطلاعاتِ شما فقط برای هماهنگیِ آموزشگاه استفاده می‌شود.<br><span style="opacity:.55">نسخهٔ صفحه: ۸</span></div>
 
 <script>
 var API = "https://script.google.com/macros/s/AKfycbxLF0ZX8f2cnOAkdh8OjGAMwYilsGdrqMslVVgL_ipTWOfDe5s0Xz-tbSFUbl695EdT/exec";
@@ -256,7 +256,7 @@ function r1(b){
   var dn=el("div","sl-dayname"); dn.innerHTML=IC.calendar; dn.appendChild(el("span",null,d.label)); h.appendChild(t); h.appendChild(dn); card.appendChild(h);
   var row=el("div","sl-slots");
   d.suggest.forEach(function(tm){ var bt=el("button","sl-slot"+(S.mode==="slot"&&S.day===d.label&&S.time===tm&&S.teacher===teach(d.teacher)?" selected":"")), rd=el("span","sl-radio"); rd.innerHTML=IC.check; bt.type="button"; bt.appendChild(el("span",null,fa(tm))); bt.appendChild(rd);
-   bt.onclick=function(){ S.day=d.label; S.time=tm; S.teacher=teach(d.teacher); S.mode="slot"; render(); }; row.appendChild(bt); });
+   bt.onclick=function(){ S.day=d.label; S.time=tm; S.teacher=teach(d.teacher); S.tid=d.key||""; S.wdk=d.wd||d.key||""; S.mode="slot"; render(); }; row.appendChild(bt); });
   card.appendChild(row); wrap.appendChild(card); });
  b.appendChild(wrap);
  if(!any) b.appendChild(el("div","empty","در حال حاضر برای این ساز زمانِ خالی نداریم. می‌توانید در لیست انتظار ثبت‌نام کنید؛ به‌محضِ آزاد شدنِ زمانِ مناسب به شما خبر می‌دهیم."));
@@ -358,7 +358,7 @@ function r4(b){
 function submit(){
  var nb=$("bNext"), er=$("kf-err2"); if(S.hp) return; if(API.indexOf("PUT_")==0){ er.textContent="فرم هنوز راه‌اندازی نشده است."; return; }
  var pre=S.mode==="slot"?(S.teacher+" | ساعتِ انتخابی از ساعت‌های خالی (قطعی نیست)"):(S.mode==="wish"?"لیست انتظار — روز/ساعت‌های دلخواه":(S.mode==="wait"?"لیست انتظار — ساعتِ خالی نبود":""));
- var pl=S.plan?("دوره: "+planLabel(S.plan)):""; var pd=(hasPay()&&S.paid)?"پرداخت کارت‌به‌کارت: اعلام شد (رسید ارسال می‌شود)":""; var note=[pre,pl,pd].filter(Boolean).join(" | ").slice(0,500);
+ var pl=S.plan?("دوره: "+planLabel(S.plan)):""; var tg=[]; if(S.mode==="slot"&&S.tid){ tg.push("k="+S.tid); tg.push("w="+S.wdk); } if(S.plan&&D&&D.rates&&D.rates[S.plan]){ tg.push("c="+S.plan); tg.push("p="+D.rates[S.plan].price); } var tag=tg.length?("⟦"+tg.join(";")+"⟧ "):""; var pd=(hasPay()&&S.paid)?"پرداخت کارت‌به‌کارت: اعلام شد (رسید ارسال می‌شود)":""; var note=(tag+[pre,pl,pd].filter(Boolean).join(" | ")).slice(0,500);
  nb.disabled=true; nb.textContent="در حال ارسال…";
  call({a:"reg",name:S.name,phone:S.phone,instrument:S.ins,day:S.day,time:S.time,birth:S.birth||"",note:note})
  .then(function(r){ if(!r.ok) throw 0; showDone(); })
