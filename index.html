@@ -153,7 +153,7 @@ label.l{display:block;font-size:13.5px;color:var(--ink-soft);margin:8px 4px 2px}
  <div class="wz-nav"><div class="wz-btns"><button type="button" class="wz-back" id="bBack">→ بازگشت</button><button type="button" class="wz-next" id="bNext">ادامه</button></div><div class="wz-stepper" id="stp"></div></div>
 </main>
 <section class="success hide" id="done"></section>
-<div class="foot">اطلاعاتِ شما فقط برای هماهنگیِ آموزشگاه استفاده می‌شود.<br><span style="opacity:.55">نسخهٔ صفحه: ۸</span></div>
+<div class="foot">اطلاعاتِ شما فقط برای هماهنگیِ آموزشگاه استفاده می‌شود.<br><span style="opacity:.55">نسخهٔ صفحه: ۹</span></div>
 
 <script>
 var API = "https://script.google.com/macros/s/AKfycbxLF0ZX8f2cnOAkdh8OjGAMwYilsGdrqMslVVgL_ipTWOfDe5s0Xz-tbSFUbl695EdT/exec";
@@ -433,13 +433,8 @@ function showDone(){
  d.appendChild(summaryCard());
  if(!wait&&hasPay()){
   if(S.code){ var tb=el("div","track-box"); tb.appendChild(el("span",null,"کد پیگیری شما")); tb.appendChild(el("b",null,fa(S.code))); d.appendChild(tb); }
-  var wn=en(D.receiptContactNumber||"").replace(/\D/g,""); if(wn.charAt(0)==="0") wn="98"+wn.slice(1);
-  if(wn.length>=11){
-   var txt="سلام، رسید پرداخت ثبت‌نام «"+S.name+"»"+(S.ins?" ("+S.ins+")":"")+" را ارسال می‌کنم."+(S.code?"\nکد پیگیری: "+fa(S.code):"");
-   var wa=el("a","wa-btn","ارسال رسید در واتساپ"); wa.href="https://wa.me/"+wn+"?text="+encodeURIComponent(txt); wa.target="_blank"; wa.rel="noopener"; d.appendChild(wa);
-  }
   var hr=new Date().getHours();
-  if(hr<9||hr>=22) d.appendChild(el("div","late-note","پیام واتساپ آموزشگاه در ساعات کاری (از ساعت ۹ صبح) برای شما ارسال می‌شود؛ می‌توانید رسید را همین حالا هم از دکمهٔ بالا بفرستید."));
+  if(hr<9||hr>=22) d.appendChild(el("div","late-note","پیام واتساپ آموزشگاه در ساعات کاری (از ساعت ۹ صبح) برای شما ارسال می‌شود؛ رسید را همان‌جا در همان چت بفرستید."));
  }
  if(!wait) d.appendChild((function(){ var n=el("div","success-note"); n.appendChild(el("span",null,"🗓️")); n.appendChild(el("span",null,"لطفاً ۱۰ دقیقه پیش از شروع کلاس در آموزشگاه حضور داشته باشید.")); return n; })());
 }
