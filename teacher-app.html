@@ -17895,11 +17895,14 @@ try{
 var startP = dashboardPeriodStart("month");
 var mineAll = d.students.filter(function(x){ return keys.indexOf(x.teacherId)>-1 && !isPendingApproval(x); });
 var activeN = mineAll.filter(function(x){ var dz = deriveStudent(x, d.rates); return !dz.expired && !dz.pendingStart; }).length;
+var newN = 0, renN = 0;
+try{
 var ents = collectPaymentEntries(d.students, d.settlements, d.manualPayrollPayments).filter(function(e){
 return e.date >= startP && keys.indexOf(e.teacherId)>-1 && e.studentId && e.studentId!=="__manual__";
 });
-var newN = ents.filter(function(e){ return normalizePaymentType(e.type)===normalizePaymentType("ثبت‌نام"); }).length;
-var renN = ents.filter(function(e){ return normalizePaymentType(e.type)===normalizePaymentType("تمدید شهریه"); }).length;
+newN = ents.filter(function(e){ return normalizePaymentType(e.type)===normalizePaymentType("ثبت‌نام"); }).length;
+renN = ents.filter(function(e){ return normalizePaymentType(e.type)===normalizePaymentType("تمدید شهریه"); }).length;
+}catch(e2){ console.warn("teacherPerfCard entries", e2); }
 var follow = mineAll.filter(function(x){ var dz = deriveStudent(x, d.rates); return dz.expired && dz.lastSessionDate && dz.lastSessionDate >= startP; })
 .sort(function(a,b){ return String(deriveStudent(b, d.rates).lastSessionDate).localeCompare(String(deriveStudent(a, d.rates).lastSessionDate)); });
 var tile = function(v, lbl){ return '<div style="flex:1;text-align:center;padding:8px 4px;border-radius:12px;background:var(--surface-2,rgba(128,128,128,.08))"><div style="font-size:20px;font-weight:800">'+toPersianDigits(v)+'</div><div style="font-size:11px;color:var(--ink-soft)">'+lbl+'</div></div>'; };
@@ -17910,7 +17913,7 @@ return '<div class="card"><div class="card-name" style="margin-bottom:8px">📈 
 + follow.map(function(x){ var dz = deriveStudent(x, d.rates); return '<div style="display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:6px 2px;border-top:1px solid var(--line)"><span>'+esc(x.name)+'</span><span style="color:var(--ink-soft);font-size:11px">پایانِ ترم: '+fmtDate(dz.lastSessionDate)+'</span></div>'; }).join('')
 : '<div class="teacher-sub" style="margin-top:10px">شاگردی برایِ پیگیریِ تمدید نداری 👌</div>')
 + '</div>';
-}catch(e){ console.error("teacherPerfCard", e); return ''; }
+}catch(e){ console.error("teacherPerfCard", e); return '<div class="card"><div class="card-name">📈 کارِ من</div><div class="teacher-sub">خطا در نمایش: '+esc(String(e&&e.message||e))+'</div></div>'; }
 })();
 return '<div class="panel">'+header
 + _todayNote
