@@ -16888,6 +16888,10 @@ var _scrollKey = [this.tab, this.view, this.currentDay, this.selectedStudentId, 
 var _bodyBefore = document.getElementById("body-slot");
 var _scrollSnap = (root && this._lastScrollKey===_scrollKey) ? { y: window.scrollY, b: _bodyBefore ? _bodyBefore.scrollTop : 0 } : null;
 this._lastScrollKey = _scrollKey;
+var _INNER_SEL = ".sheet, #rem-cal-day-section, .list, [style*='overflow-y:auto'], [style*='overflow:auto']";
+var _innerFp = function(el){ return (el.id||"")+"|"+(el.className&&el.className.baseVal==null?el.className:"")+"|"+String(el.textContent||"").replace(/\\s+/g," ").trim().slice(0,40); };
+var _innerSnap = [];
+try{ if(root){ Array.prototype.forEach.call(root.querySelectorAll(_INNER_SEL), function(el, i){ if(el.scrollTop>0 && el.id!=="body-slot") _innerSnap.push({ i:i, fp:_innerFp(el), t:el.scrollTop }); }); } }catch(e){}
 var calElBefore = document.getElementById("reminders-calendar-scroll");
 var calScrollTop = calElBefore ? calElBefore.scrollTop : null;
 var calScrollHeight = calElBefore ? calElBefore.scrollHeight : null;
@@ -16989,6 +16993,12 @@ if(_bodyAfter && _scrollSnap.b) _bodyAfter.scrollTop = _scrollSnap.b;
 if(_scrollSnap.y) window.scrollTo(0, _scrollSnap.y);
 }catch(e){}
 }
+try{
+if(_innerSnap.length){
+var _innerList = document.getElementById("root") ? document.getElementById("root").querySelectorAll(_INNER_SEL) : [];
+_innerSnap.forEach(function(sn){ var el = _innerList[sn.i]; if(el && _innerFp(el)===sn.fp) el.scrollTop = sn.t; });
+}
+}catch(e){}
 if(activeId){
 var toFocus = document.getElementById(activeId);
 if(toFocus){
@@ -17069,7 +17079,12 @@ var active = document.activeElement;
 var activeId = (active && active.id && bodySlot.contains(active)) ? active.id : null;
 var activeSel = (activeId && active.selectionStart!=null) ? active.selectionStart : null;
 var _kp = {}; Array.prototype.forEach.call(bodySlot.querySelectorAll("details[data-keep]"), function(dt){ _kp[dt.getAttribute("data-keep")] = dt.open; });
+var _bSel = ".sheet, .list, [style*='overflow-y:auto'], [style*='overflow:auto'], .rem-cal-scroll";
+var _bFp = function(el){ return (el.id||"")+"|"+(typeof el.className==="string"?el.className:"")+"|"+String(el.textContent||"").replace(/\s+/g," ").trim().slice(0,40); };
+var _bSnap = []; try{ Array.prototype.forEach.call(bodySlot.querySelectorAll(_bSel), function(el, i){ if(el.scrollTop>0) _bSnap.push({ i:i, fp:_bFp(el), t:el.scrollTop }); }); }catch(e){}
+var _bTop = bodySlot.scrollTop;
 bodySlot.innerHTML = this.renderBody();
+try{ var _bl = bodySlot.querySelectorAll(_bSel); _bSnap.forEach(function(sn){ var el = _bl[sn.i]; if(el && _bFp(el)===sn.fp) el.scrollTop = sn.t; }); if(_bTop && !bodySlot.scrollTop) bodySlot.scrollTop = _bTop; }catch(e){}
 var navSlot = document.getElementById("bottom-nav-slot");
 if(navSlot) navSlot.innerHTML = (this.selectedStudentId || this.settlementViewId) ? '' : this.renderBottomNav();
 try{ App.accNested(); }catch(e){}
@@ -17906,14 +17921,73 @@ renN = ents.filter(function(e){ return normalizePaymentType(e.type)===normalizeP
 var follow = mineAll.filter(function(x){ var dz = deriveStudent(x, d.rates); return dz.expired && dz.lastSessionDate && dz.lastSessionDate >= startP; })
 .sort(function(a,b){ return String(deriveStudent(b, d.rates).lastSessionDate).localeCompare(String(deriveStudent(a, d.rates).lastSessionDate)); });
 var tile = function(v, lbl){ return '<div style="flex:1;text-align:center;padding:8px 4px;border-radius:12px;background:var(--surface-2,rgba(128,128,128,.08))"><div style="font-size:20px;font-weight:800">'+toPersianDigits(v)+'</div><div style="font-size:11px;color:var(--ink-soft)">'+lbl+'</div></div>'; };
-return '<div class="card"><div class="card-name" style="margin-bottom:8px">📈 کارِ من (۳۰ روزِ اخیر)</div>'
-+ '<div style="display:flex;gap:8px">'+tile(activeN,'شاگردِ فعال')+tile(newN,'🆕 جدید')+tile(renN,'🔁 تمدید')+'</div>'
+var rk = null;
+try{
+var t0 = todayISO(), c1 = addDays(t0,1), c0 = addDays(t0,-89), p0 = addDays(t0,-179);
+var myEnts = collectPaymentEntries(d.students, d.settlements, d.manualPayrollPayments).filter(function(e){ return keys.indexOf(e.teacherId)>-1 && e.studentId && e.studentId!=="__manual__" && e.paymentReceived!==false && e.date && normalizePaymentType(e.type)===normalizePaymentType("تمدید شهریه"); });
+var win = function(a,b){
+var r = myEnts.filter(function(e){ return e.date>=a && e.date<b; }).length;
+var l = mineAll.filter(function(x){ var dz = deriveStudent(x, d.rates); return dz.expired && dz.lastSessionDate && dz.lastSessionDate>=a && dz.lastSessionDate<b; }).length;
+var dn = r+l; return { r:r, l:l, den:dn, keep: dn>0 ? Math.round(r*100/dn) : null };
+};
+rk = { cur: win(c0,c1), prev: win(p0,c0) };
+}catch(e3){ console.warn("teacherPerfCard retention", e3); }
+var chartHtml = '';
+try{
+var ser = null;
+keys.forEach(function(k){ var sr = App.teacherPerfSeries(k, 6); if(!ser){ ser = sr.map(function(x){ return Object.assign({}, x); }); return; } sr.forEach(function(x, i){ ser[i].n += x.n; ser[i].r += x.r; ser[i].l += x.l; }); });
+if(ser && ser.some(function(x){ return x.n || x.r; })){
+var Fd = toPersianDigits, W = 340, H = 140, padL = 22, padR = 6, pT = 14, pB = 20, cw = W-padL-padR, ch = H-pT-pB, gw = cw/ser.length;
+var mx = 1; ser.forEach(function(x){ mx = Math.max(mx, x.n, x.r); }); mx = mx<=4 ? 4 : Math.ceil(mx/2)*2;
+var bw = Math.max(6, Math.min(16, (gw-6)/2));
+var svg = '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;direction:ltr;display:block" role="img" aria-label="نمودارِ ماهانه">';
+[0,0.5,1].forEach(function(f){ var yy = pT+ch-f*ch; svg += '<line x1="'+padL+'" x2="'+(W-padR)+'" y1="'+yy+'" y2="'+yy+'" stroke="currentColor" stroke-opacity="'+(f===0?'.3':'.1')+'"'+(f===0?'':' stroke-dasharray="3 4"')+'/><text x="'+(padL-5)+'" y="'+(yy+3)+'" font-size="8.5" text-anchor="end" fill="currentColor" fill-opacity=".5">'+Fd(Math.round(f*mx))+'</text>'; });
+var pts = [];
+ser.forEach(function(x, i){
+var cx = padL + i*gw + gw/2, gx = cx - (bw*2+2)/2;
+[[x.n,'var(--primary)'],[x.r,'var(--amber)']].forEach(function(b, j){
+if(b[0]<=0) return;
+var hh = Math.max(2, (b[0]/mx)*ch), bx = gx + j*(bw+2);
+svg += '<rect x="'+bx+'" y="'+(pT+ch-hh)+'" width="'+bw+'" height="'+hh+'" fill="'+b[1]+'" rx="3"/><text x="'+(bx+bw/2)+'" y="'+(pT+ch-hh-3)+'" font-size="8.5" font-weight="700" text-anchor="middle" fill="currentColor" fill-opacity=".8">'+Fd(b[0])+'</text>';
+});
+var cur = i===ser.length-1;
+svg += '<text x="'+cx+'" y="'+(H-6)+'" font-size="9" text-anchor="middle" fill="currentColor" fill-opacity="'+(cur?'.95':'.65')+'"'+(cur?' font-weight="700"':'')+'>'+esc(x.name)+(cur?'*':'')+'</text>';
+var dn = x.r + x.l;
+pts.push(dn>=3 ? { x:cx, y:pT+ch-(Math.round(x.r*100/dn)/100)*ch, k:Math.round(x.r*100/dn) } : null);
+});
+var run = [];
+var flush = function(){ if(run.length>1) svg += '<polyline points="'+run.map(function(p){ return p.x+','+p.y; }).join(' ')+'" fill="none" stroke="currentColor" stroke-opacity=".55" stroke-width="1.4" stroke-dasharray="4 3" stroke-linejoin="round"/>'; run.forEach(function(p){ svg += '<circle cx="'+p.x+'" cy="'+p.y+'" r="2.6" fill="var(--cream)" stroke="currentColor" stroke-opacity=".7" stroke-width="1.3"><title>'+Fd(p.k)+'٪</title></circle>'; }); run = []; };
+pts.forEach(function(p){ if(p) run.push(p); else flush(); }); flush();
+svg += '</svg>';
+var best = ser.reduce(function(a,x){ return x.r>a.r ? x : a; }, ser[0]);
+chartHtml = '<div style="margin-top:12px;padding:10px 10px 6px;border-radius:14px;background:var(--surface-2,rgba(128,128,128,.08))">'
++ '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:0 2px 4px"><b style="font-size:12.5px">۶ ماهِ اخیر</b><span style="font-size:10.5px;color:var(--ink-soft)"><span style="color:var(--primary)">■</span> جدید &nbsp;<span style="color:var(--amber)">■</span> تمدید &nbsp;┅ ماندگاری (٪)</span></div>'
++ svg
++ (best && best.r>0 ? ('<div style="font-size:12px;margin:4px 2px 4px">🏅 بهترینِ ماهِ شما: <b>'+esc(best.name)+'</b> با '+Fd(best.r)+' تمدید</div>') : '')
++ '<div style="font-size:10px;color:var(--ink-soft);margin:0 2px 4px">ستاره (*) نشان‌دهنده‌یِ ماهِ جاری است که هنوز کامل نشده است. خطِ ماندگاری فقط برایِ ماه‌هایی نمایش داده می‌شود که دست‌کم ۳ ترم داشته‌اند.</div></div>';
+}
+}catch(e4){ console.warn("teacherPerfCard chart", e4); }
+var rkHtml = '';
+if(rk){
+var okC = rk.cur.den>=5, okP = rk.prev.den>=5;
+var dl = (okC && okP && rk.cur.keep!==rk.prev.keep) ? ('<div style="font-size:10px;color:var(--ink-soft)">'+(rk.cur.keep>rk.prev.keep?'▲ ':'▼ ')+toPersianDigits(Math.abs(rk.cur.keep-rk.prev.keep))+'٪ نسبت به ۳ ماهِ قبل</div>') : '';
+rkHtml = '<div class="teacher-sub" style="margin:12px 0 6px">۳ ماهِ اخیر</div><div style="display:flex;gap:8px">'
++ tile(rk.cur.l,'📉 ریزش')
++ '<div style="flex:1;text-align:center;padding:8px 4px;border-radius:12px;background:var(--surface-2,rgba(128,128,128,.08))">'
++ (okC ? ('<div style="font-size:20px;font-weight:800">'+toPersianDigits(rk.cur.keep)+'٪</div><div style="font-size:11px;color:var(--ink-soft)">ماندگاری (از '+toPersianDigits(rk.cur.den)+' ترم)</div>'+dl)
+: '<div style="font-size:13px;font-weight:700;padding:4px 0">—</div><div style="font-size:10.5px;color:var(--ink-soft)">ماندگاری: داده‌یِ کافی موجود نیست</div>')
++ '</div></div>';
+}
+return '<div class="card"><div class="card-name" style="margin-bottom:8px">📈 عملکردِ من (۳۰ روزِ اخیر)</div>'
++ '<div style="display:flex;gap:8px">'+tile(activeN,'هنرجویِ فعال')+tile(newN,'🆕 جدید')+tile(renN,'🔁 تمدید')+'</div>'
++ rkHtml
++ chartHtml
 + (follow.length
-? '<div class="teacher-sub" style="margin:12px 0 4px">📞 پیگیریِ تمدید — ترمِ این شاگردها تموم شده و هنوز تمدید نکردن</div>'
+? '<div class="teacher-sub" style="margin:12px 0 4px">📞 پیگیریِ تمدید — ترمِ این هنرجویان به پایان رسیده و هنوز تمدید نکرده‌اند</div>'
 + follow.map(function(x){ var dz = deriveStudent(x, d.rates); return '<div style="display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:6px 2px;border-top:1px solid var(--line)"><span>'+esc(x.name)+'</span><span style="color:var(--ink-soft);font-size:11px">پایانِ ترم: '+fmtDate(dz.lastSessionDate)+'</span></div>'; }).join('')
-: '<div class="teacher-sub" style="margin-top:10px">شاگردی برایِ پیگیریِ تمدید نداری 👌</div>')
+: '<div class="teacher-sub" style="margin-top:10px">هنرجویی برایِ پیگیریِ تمدید وجود ندارد.</div>')
 + '</div>';
-}catch(e){ console.error("teacherPerfCard", e); return '<div class="card"><div class="card-name">📈 کارِ من</div><div class="teacher-sub">خطا در نمایش: '+esc(String(e&&e.message||e))+'</div></div>'; }
+}catch(e){ console.error("teacherPerfCard", e); return '<div class="card"><div class="card-name">📈 عملکردِ من</div><div class="teacher-sub">خطا در نمایش: '+esc(String(e&&e.message||e))+'</div></div>'; }
 })();
 return '<div class="panel">'+header
 + _todayNote
