@@ -65,8 +65,7 @@ label.l{display:block;font-size:13.5px;color:var(--ink-soft);margin:8px 4px 2px}
 .plan-meta b{font-weight:700;margin-left:8px}.plan-meta i{font-style:normal}
 .plan-price{font-size:18px;font-weight:800;color:var(--primary);white-space:nowrap}
 .plan-pr{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex:none}
-.plan-old{font-size:15px;color:var(--ink-soft);position:relative;white-space:nowrap;opacity:.85}
-.plan-old:after{content:'';position:absolute;left:-2px;right:-2px;top:58%;height:1px;background:var(--brick,#c0614f);transform:rotate(-4deg)}
+.plan-old{font-size:14px;color:var(--ink-soft);text-decoration:line-through;text-decoration-thickness:1.5px;white-space:nowrap}
 .plan-sub{font-size:13px;color:var(--ink-soft);white-space:nowrap}
 .plan-badge{display:inline-block;margin-top:7px;padding:3px 10px;border-radius:99px;border:1px solid var(--primary);background:rgba(212,160,60,.14);color:var(--primary);font-size:13px;font-weight:800;line-height:1.5}
 .plan-lock{display:block;margin-top:6px;font-size:13px;line-height:1.6;color:var(--ink-soft);text-wrap:balance}
@@ -329,7 +328,7 @@ function r2(b){
   var pr=el("span","plan-pr"), mo=D.rates.monthly, ratio=(mo&&mo.sessions>0&&k!=="monthly")?(r.sessions/mo.sessions):0, base=ratio>0?Math.round(mo.price*ratio):0, save=base-Number(r.price||0);
   if(ratio>=2&&save>0){
    var mil=function(v){ return fa((Math.round(v/1e5)/10).toString().replace(".","٫")); };
-   pr.appendChild(el("span","plan-old",fa(base.toLocaleString("en-US"))));
+   pr.appendChild(el("span","plan-old",money(base)));
    pr.appendChild(el("span","plan-price",money(r.price)));
   } else pr.appendChild(el("span","plan-price",money(r.price)));
   if(k==="semiannual"){ var lk=el("span","plan-lock"),lb=el("b",null,"🔒 علاوه بر تخفیف"); lb.style.display="block"; lb.style.color="var(--primary)"; lk.appendChild(lb); lk.appendChild(document.createTextNode("قیمتِ ثابت؛ تورم شاملِ شما نمی‌شود")); l.appendChild(lk); }
