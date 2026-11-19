@@ -2434,6 +2434,16 @@ if(!count) return '';
 return '<div class="mini-star-row'+(compact?' compact':'')+'" title="'+count+' ترم">'
 + '<span class="mini-star'+(compact?' compact':'')+'">'+toPersianDigits(count)+'× ⭐</span></div>';
 }
+var OVERDUE_FOLLOWUP_DAYS = 7;
+function followUpCompare(da, db){
+var oa = da.daysSinceExpired>OVERDUE_FOLLOWUP_DAYS, ob = db.daysSinceExpired>OVERDUE_FOLLOWUP_DAYS;
+if(oa!==ob) return oa?-1:1;
+if(oa) return db.daysSinceExpired-da.daysSinceExpired;
+return da.daysSinceExpired-db.daysSinceExpired;
+}
+function overdueBadgeHtml(z){
+return (z && z.expired && z.daysSinceExpired>OVERDUE_FOLLOWUP_DAYS) ? ' <span style="font-size:10px;font-weight:700;color:var(--brick);border:1px solid var(--brick);border-radius:99px;padding:0 6px;white-space:nowrap">⏰ '+toPersianDigits(z.daysSinceExpired)+' روز</span>' : '';
+}
 function sortStudentsByPriority(students, rates, todayKey){
 return students.slice().sort(function(a, b){
 var da = deriveStudent(a, rates), db = deriveStudent(b, rates);
@@ -17919,7 +17929,7 @@ newN = ents.filter(function(e){ return normalizePaymentType(e.type)===normalizeP
 renN = ents.filter(function(e){ return normalizePaymentType(e.type)===normalizePaymentType("تمدید شهریه"); }).length;
 }catch(e2){ console.warn("teacherPerfCard entries", e2); }
 var follow = mineAll.filter(function(x){ var dz = deriveStudent(x, d.rates); return dz.expired && dz.lastSessionDate && dz.lastSessionDate >= startP; })
-.sort(function(a,b){ return String(deriveStudent(b, d.rates).lastSessionDate).localeCompare(String(deriveStudent(a, d.rates).lastSessionDate)); });
+.sort(function(a,b){ return followUpCompare(deriveStudent(a, d.rates), deriveStudent(b, d.rates)); });
 var tile = function(v, lbl){ return '<div style="flex:1;text-align:center;padding:8px 4px;border-radius:12px;background:var(--surface-2,rgba(128,128,128,.08))"><div style="font-size:20px;font-weight:800">'+toPersianDigits(v)+'</div><div style="font-size:11px;color:var(--ink-soft)">'+lbl+'</div></div>'; };
 var rk = null;
 try{
@@ -17932,6 +17942,11 @@ var dn = r+l; return { r:r, l:l, den:dn, keep: dn>0 ? Math.round(r*100/dn) : nul
 };
 rk = { cur: win(c0,c1), prev: win(p0,c0) };
 }catch(e3){ console.warn("teacherPerfCard retention", e3); }
+var ftHtmlT = '';
+try{
+var ftT = App.firstTermStats(keys, addDays(todayISO(),-179), addDays(todayISO(),1));
+if(ftT.den>=1) ftHtmlT = '<div class="teacher-sub" style="margin:12px 0 6px">🌱 ریزشِ ترمِ اول (۶ ماهِ اخیر)</div><div style="padding:8px 10px;border-radius:12px;background:var(--surface-2,rgba(128,128,128,.08));font-size:12.5px;line-height:1.9">'+toPersianDigits(ftT.dropped)+' نفر از '+toPersianDigits(ftT.den)+' هنرجویِ تازه‌ثبت‌نام بعد از ترمِ اول تمدید نکردند'+(ftT.rate!=null?(' ('+toPersianDigits(ftT.rate)+'٪)'):'')+'.</div>';
+}catch(eF){ console.warn("teacherPerfCard firstTerm", eF); }
 var chartHtml = '';
 try{
 var ser = null;
@@ -17981,10 +17996,11 @@ rkHtml = '<div class="teacher-sub" style="margin:12px 0 6px">۳ ماهِ اخی�
 return '<div class="card"><div class="card-name" style="margin-bottom:8px">📈 عملکردِ من (۳۰ روزِ اخیر)</div>'
 + '<div style="display:flex;gap:8px">'+tile(activeN,'هنرجویِ فعال')+tile(newN,'🆕 جدید')+tile(renN,'🔁 تمدید')+'</div>'
 + rkHtml
++ ftHtmlT
 + chartHtml
 + (follow.length
 ? '<div class="teacher-sub" style="margin:12px 0 4px">📞 پیگیریِ تمدید — ترمِ این هنرجویان به پایان رسیده و هنوز تمدید نکرده‌اند</div>'
-+ follow.map(function(x){ var dz = deriveStudent(x, d.rates); return '<div style="display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:6px 2px;border-top:1px solid var(--line)"><span>'+esc(x.name)+'</span><span style="color:var(--ink-soft);font-size:11px">پایانِ ترم: '+fmtDate(dz.lastSessionDate)+'</span></div>'; }).join('')
++ follow.map(function(x){ var dz = deriveStudent(x, d.rates); return '<div style="display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:6px 2px;border-top:1px solid var(--line)"><span>'+esc(x.name)+overdueBadgeHtml(dz)+'</span><span style="color:var(--ink-soft);font-size:11px">پایانِ ترم: '+fmtDate(dz.lastSessionDate)+'</span></div>'; }).join('')
 : '<div class="teacher-sub" style="margin-top:10px">هنرجویی برایِ پیگیریِ تمدید وجود ندارد.</div>')
 + '</div>';
 }catch(e){ console.error("teacherPerfCard", e); return '<div class="card"><div class="card-name">📈 عملکردِ من</div><div class="teacher-sub">خطا در نمایش: '+esc(String(e&&e.message||e))+'</div></div>'; }
@@ -22700,7 +22716,7 @@ return sortStudentsByPriority(list, d.rates, todayKey);
 list = list.filter(function(s){ return !deriveStudent(s, d.rates).archivedNotRenewed; });
 if(mode==="expired"){
 list = list.filter(function(s){ return deriveStudent(s, d.rates).expired; });
-return list.slice().sort(function(a,b){ return deriveStudent(a, d.rates).daysSinceExpired - deriveStudent(b, d.rates).daysSinceExpired; });
+return list.slice().sort(function(a,b){ return followUpCompare(deriveStudent(a, d.rates), deriveStudent(b, d.rates)); });
 }
 if(mode==="nearEnd"){
 list = list.filter(function(s){ return deriveStudent(s, d.rates).yellowAlert; });
@@ -23016,6 +23032,63 @@ for(var i=0; i<ml.length; i++){ if(der.lastSessionDate>=ml[i].start && der.lastS
 });
 ml.forEach(function(x){ var den = x.r + x.l; x.keep = den>0 ? Math.round(x.r*100/den) : null; });
 return ml;
+},
+firstTermStats: function(keys, startIso, endIso){
+var d = this.data, rates = d.rates, tR = normalizePaymentType("ثبت‌نام");
+var out = { stayed:0, dropped:0, pending:0, droppedList:[] };
+(d.students||[]).forEach(function(s){
+if(isPendingApproval(s)) return;
+if(keys && keys.indexOf(s.teacherId)<0 && !(s.teacherId==null)) return;
+if(keys && s.teacherId==null) return;
+var reg = null;
+(s.paymentHistory||[]).forEach(function(p){ if(p && p.paymentReceived!==false && p.date && normalizePaymentType(p.type)===tR && (!reg || p.date<reg)) reg = p.date; });
+if(!reg || reg<startIso || reg>=endIso) return;
+if(termCountFor(s)>0){ out.stayed++; return; }
+var z = deriveStudent(s, rates);
+if(z.pendingStart) return;
+if(z.expired){ out.dropped++; out.droppedList.push(s); } else out.pending++;
+});
+out.den = out.stayed + out.dropped;
+out.rate = out.den>0 ? Math.round(out.dropped*100/out.den) : null;
+return out;
+},
+teacherDeclineAlerts: function(){
+var self = this, out = [];
+if(!this.isAdmin()) return out;
+this.teacherPerfKeys().forEach(function(k){
+var ser = self.teacherPerfSeries(k, 4).slice(0, 3);
+if(ser.length<3) return;
+var ok = ser.every(function(x){ return x.keep!=null && (x.r+x.l)>=3; });
+if(!ok) return;
+var a = ser[0].keep, b = ser[1].keep, c = ser[2].keep;
+if(a>b && b>c && c<70 && (a-c)>=10) out.push({ key:k, label:self.teacherPerfLabel(k), vals:[a,b,c], names:ser.map(function(x){ return x.name; }) });
+});
+return out;
+},
+teacherRenewSpeed: function(keys, startIso, endIso){
+var d = this.data, rates = d.rates, tR = normalizePaymentType("تمدید شهریه");
+var delays = [];
+(d.students||[]).forEach(function(s){
+if(isPendingApproval(s)) return;
+if(keys && keys.indexOf(s.teacherId)<0) return;
+var pays = (s.paymentHistory||[]).filter(function(p){ return p && p.paymentReceived!==false && p.termId!=null && p.date && p.date>=startIso && p.date<endIso && normalizePaymentType(p.type)===tR; });
+if(!pays.length) return;
+var terms; try{ terms = buildStudentTerms(s, rates); }catch(e){ return; }
+pays.forEach(function(p){
+var ix = -1; terms.forEach(function(t, i){ if(t.id===p.termId) ix = i; });
+if(ix<1 || terms[ix-1].pendingStart) return;
+var ds; try{ ds = generateTermSessionDates(terms[ix-1], s); }catch(e){ return; }
+if(!ds.length) return;
+delays.push(Math.max(0, daysBetween(ds[ds.length-1].date, p.date)));
+});
+});
+delays.sort(function(a,b){ return a-b; });
+var n = delays.length;
+var med = n ? (n%2 ? delays[(n-1)/2] : Math.round((delays[n/2-1]+delays[n/2])/2)) : null;
+return { n:n, median:med,
+fast: delays.filter(function(x){ return x<=3; }).length,
+mid: delays.filter(function(x){ return x>3 && x<=OVERDUE_FOLLOWUP_DAYS; }).length,
+slow: delays.filter(function(x){ return x>OVERDUE_FOLLOWUP_DAYS; }).length };
 },
 renderTeacherPerfSheet: function(){
 var tp = this.teacherPerf; if(!tp) return '';
@@ -23365,6 +23438,11 @@ var body = cat.rows.length ? cat.rows.join("") : ('<div class="empty" style="pad
 return header + body;
 }).join("")
 + '<div class="breakdown-row"><span>بدهیِ معلقِ حقوق (پرداخت‌نشده)</span><span style="color:'+(pendingTotal>0?'var(--brick)':'var(--ink-soft)')+'">'+fmtMoney(pendingTotal)+'</span></div>';
+var declineAlerts = self.teacherDeclineAlerts(), declineByKey = {};
+declineAlerts.forEach(function(a){ declineByKey[a.key] = a; });
+var declineCardHtml = declineAlerts.length ? ('<div class="card" style="border:1px solid var(--brick);background:var(--brick-bg)"><div class="card-name" style="margin-bottom:6px;color:var(--brick)">📉 افتِ پیوستهٔ ماندگاری</div>'
++ declineAlerts.map(function(a){ return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--line);cursor:pointer;font-size:13px" onclick="App.openTeacherPerf(\''+esc(a.key)+'\')"><b>'+esc(a.label)+' ›</b><span style="font-size:11.5px;color:var(--brick);font-weight:700;direction:ltr">'+a.vals.map(function(v){ return toPersianDigits(v)+'٪'; }).join(' ← ')+'</span></div>'; }).join('')
++ '<div class="teacher-sub" style="font-size:10.5px;margin-top:6px">ماندگاری در ۳ ماهِ کاملِ اخیر دو بار پشت‌سرهم کم شده. این هشدار فقط برایِ مدیر است.</div></div>') : '';
 var teacherBreakdownHtml = teacherRows.length===0 ? '<div class="teacher-sub">تو این بازه اطلاعاتی برایِ معلم‌ها ثبت نشده.</div>'
 : teacherRows.map(function(r){
 var keepTxt = r.keep==null ? "—" : (toPersianDigits(r.keep)+"٪");
