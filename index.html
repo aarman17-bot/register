@@ -329,8 +329,8 @@ function r2(b){
   var pr=el("span","plan-pr"), mo=D.rates.monthly, ratio=(mo&&mo.sessions>0&&k!=="monthly")?(r.sessions/mo.sessions):0, base=ratio>0?Math.round(mo.price*ratio):0, save=base-Number(r.price||0);
   if(ratio>=2&&save>0){
    var mil=function(v){ return fa((Math.round(v/1e5)/10).toString().replace(".","٫")); };
+   pr.appendChild(el("span","plan-old",fa(base.toLocaleString("en-US"))));
    pr.appendChild(el("span","plan-price",money(r.price)));
-   var ps=el("span","plan-sub"),po=el("span","plan-old",mil(mo.price)); po.style.display="inline-block"; ps.appendChild(document.createTextNode("ماهی ")); ps.appendChild(po); ps.appendChild(document.createTextNode(" "+mil(r.price/ratio)+" میلیون")); pr.appendChild(ps);
   } else pr.appendChild(el("span","plan-price",money(r.price)));
   if(k==="semiannual"){ var lk=el("span","plan-lock"),lb=el("b",null,"🔒 علاوه بر تخفیف"); lb.style.display="block"; lb.style.color="var(--primary)"; lk.appendChild(lb); lk.appendChild(document.createTextNode("قیمتِ ثابت؛ تورم شاملِ شما نمی‌شود")); l.appendChild(lk); }
   c.appendChild(l); c.appendChild(pr);
