@@ -232,7 +232,7 @@ function doLogin(pin,fam,remember,silent){
  return post({a:"portal",dg4:pin,fam:fam||""}).then(function(r){
   if(r&&r.ok&&r.pick&&r.pick.length){ viewPick(r.pick,pin,remember); return; }
   if(r&&r.ok&&r.data&&r.data.kids&&r.data.kids.length){
-   S.kids=r.data.kids; S.pin=pin; S.fam=r.data.fam||fam||""; S.at=r.data.at||null; S.offline=false; S.idx=Math.max(0,Math.min(r.data.me||0,S.kids.length-1));
+   S.kids=r.data.kids; S.pin=pin; S.fam=r.data.fam||fam||""; S.at=r.data.at||null; S.links=r.data.links||null; if(S.links) lsSet("links",JSON.stringify(S.links)); S.offline=false; S.idx=Math.max(0,Math.min(r.data.me||0,S.kids.length-1));
    lsSet("cache",JSON.stringify({kids:S.kids,at:S.at,idx:S.idx}));
    if(remember) lsSet("rem",JSON.stringify({k:pin,f:fam||(r.data.fam||"")})); else lsDel("rem");
    viewHome(); return;
@@ -267,11 +267,82 @@ function bookSlot(k,x,t,box){
   if(r&&r.err==="taken"){ setTimeout(function(){ var e2=document.querySelector(".cx.go .err"); if(e2) e2.textContent=m; },50); }
  },function(){ btns.forEach(function(b){ b.disabled=false; }); if(er) er.textContent="اتصال به اینترنت برقرار نیست."; });
 }
+function renderMsgs(app,k){
+ var now=Date.now();
+ (k.msgs||[]).forEach(function(m){
+  if(!m||!m.tx||(m.exp&&m.exp<now)||lsGet("pm_"+m.id)) return;
+  var c=el("section","cx");
+  c.appendChild(el("h3",null,"اطلاعیهٔ آموزشگاه"));
+  c.appendChild(el("p",null,m.tx));
+  if(m.d) c.appendChild(el("p","soft","تاریخ اطلاعیه: "+m.d));
+  var b=el("button","btn ghost","مطلع شدم"); b.type="button";
+  b.onclick=function(){ lsSet("pm_"+m.id,"1"); if(c.parentNode) c.parentNode.removeChild(c); };
+  c.appendChild(b); app.appendChild(c);
+ });
+}
+var REQ_L={onehour:"درخواست تبدیل به کلاس یک‌ساعته",group:"ثبت درخواست گروه‌نوازی",move:"درخواست تغییر ساعت کلاس",absent:"اطلاع غیبت",receipt:"ارسال فیش واریزی",other:"ارسال پیام به آموزشگاه"};
+var REQ_H={onehour:"در صورت تمایل، توضیحات تکمیلی (مانند ساعت‌های مناسب) را بنویسید.",group:"ساز، سطح و زمان‌های مناسب خود را بنویسید.",move:"ساعت یا روز پیشنهادی خود را بنویسید.",absent:"تاریخ جلسهٔ مورد نظر را بنویسید. توجه: غیبت، حتی با اطلاع قبلی، جزو جلسات دورهٔ شما محسوب می‌شود.",receipt:"توضیحات (اختیاری)",other:"متن پیام خود را بنویسید."};
+var REQ_S={new:"در انتظار بررسی",approved:"تأیید شد",rejected:"رد شد",replied:"پاسخ داده شد"};
+function compressImg(file,cb){
+ var fr=new FileReader();
+ fr.onload=function(){ var im=new Image(); im.onload=function(){
+  function enc(max,q){ var s=Math.min(1,max/Math.max(im.width,im.height)), c=document.createElement("canvas"); c.width=Math.round(im.width*s); c.height=Math.round(im.height*s); c.getContext("2d").drawImage(im,0,0,c.width,c.height); return c.toDataURL("image/jpeg",q); }
+  var o=enc(1100,0.72); if(o.length>850000) o=enc(900,0.55); cb(o.length>850000?null:o);
+ }; im.onerror=function(){ cb(null); }; im.src=fr.result; };
+ fr.onerror=function(){ cb(null); }; fr.readAsDataURL(file);
+}
+function openReq(k,kind,card){
+ clr(card);
+ card.appendChild(el("h3",null,REQ_L[kind]));
+ var ta=el("textarea"); ta.rows=4; ta.maxLength=500; ta.placeholder=REQ_H[kind]; ta.style.cssText="width:100%;margin-top:8px;padding:10px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface2);color:var(--ink)";
+ card.appendChild(ta);
+ var amt=null, fi=null, img=null;
+ if(kind==="receipt"){
+  amt=el("input"); amt.placeholder="مبلغ واریزی (تومان)"; amt.inputMode="numeric"; amt.style.cssText="width:100%;margin-top:8px;padding:10px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface2);color:var(--ink)"; card.appendChild(amt);
+  fi=el("input"); fi.type="file"; fi.accept="image/*"; fi.style.marginTop="8px"; card.appendChild(fi);
+  var st=el("p","soft","تصویر فیش را انتخاب کنید."); card.appendChild(st);
+  fi.onchange=function(){ img=null; if(!fi.files[0]) return; st.textContent="در حال آماده‌سازی تصویر..."; compressImg(fi.files[0],function(o){ img=o; st.textContent=o?"تصویر آماده ارسال است.":"تصویر قابل استفاده نیست؛ تصویر دیگری انتخاب کنید."; }); };
+ }
+ var er=el("div","err",""); card.appendChild(er);
+ var ok=el("button","btn","ثبت درخواست"); ok.type="button"; card.appendChild(ok);
+ var cn=el("button","btn ghost","انصراف"); cn.type="button"; cn.onclick=function(){ viewHome(); }; card.appendChild(cn);
+ ok.onclick=function(){
+  er.textContent="";
+  var tx=ta.value.trim();
+  if(kind==="receipt"&&!img){ er.textContent="لطفاً تصویر فیش را انتخاب کنید."; return; }
+  if((kind==="other"||kind==="move"||kind==="absent")&&!tx){ er.textContent="لطفاً توضیحات را بنویسید."; return; }
+  ok.disabled=true; cn.disabled=true; ok.textContent="در حال ارسال...";
+  post({a:"portal",op:"req",dg4:S.pin,fam:S.fam,sid:k.sid,kind:kind,text:tx,amt:amt?en(amt.value).replace(/\D/g,""):"",img:img||""}).then(function(r){
+   if(r&&r.ok){ k.reqs=(k.reqs||[]).concat([r.req]); try{ lsSet("cache",JSON.stringify({kids:S.kids,at:S.at,idx:S.idx})); }catch(e){} viewHome(); return; }
+   var m=r&&r.err==="dup"?"درخواست مشابهی از شما در حال بررسی است.":r&&r.err==="many"?"تعداد درخواست‌های در حال بررسی زیاد است؛ لطفاً منتظر پاسخ بمانید.":r&&r.err==="big"?"حجم تصویر زیاد است.":"ثبت درخواست انجام نشد؛ دوباره تلاش کنید.";
+   er.textContent=m; ok.disabled=false; cn.disabled=false; ok.textContent="ثبت درخواست";
+  },function(){ er.textContent="اتصال به اینترنت برقرار نیست."; ok.disabled=false; cn.disabled=false; ok.textContent="ثبت درخواست"; });
+ };
+}
+function renderServices(app,k){
+ if(S.offline||!k.sid) return;
+ var rq=(k.reqs||[]).slice(-5).reverse();
+ if(rq.length){
+  var rc=el("section","cx"); rc.appendChild(el("h3",null,"درخواست‌های من"));
+  rq.forEach(function(r){ var p=el("p",null,(REQ_L[r.kind]||"")+" — "+(REQ_S[r.st]||"")); rc.appendChild(p); if(r.reply) rc.appendChild(el("p","soft","پاسخ آموزشگاه: "+r.reply)); });
+  app.appendChild(rc);
+ }
+ var c=el("section","cx"); c.appendChild(el("h3",null,"خدمات و درخواست‌ها"));
+ ["onehour","group","move","absent","receipt","other"].forEach(function(kd){
+  var b=el("button","btn ghost",REQ_L[kd]); b.type="button"; b.onclick=function(){ openReq(k,kd,c); }; c.appendChild(b);
+ });
+ var lk=S.links; if(!lk){ try{ lk=JSON.parse(lsGet("links")||"null"); }catch(e){} }
+ if(lk&&/^https?:\/\//i.test(lk.reg||"")){ var a=el("a","btn ghost","ثبت‌نام هنرجوی جدید"); a.href=lk.reg; a.target="_blank"; a.rel="noopener"; a.style.textDecoration="none"; c.appendChild(a); }
+ app.appendChild(c);
+}
 function renderCx(app,k){
  (k.cx||[]).forEach(function(x){
+  var _n=new Date(), _t=_n.getFullYear()+"-"+("0"+(_n.getMonth()+1)).slice(-2)+"-"+("0"+_n.getDate()).slice(-2), _f=new Date(_n.getTime()-21*86400000), _fl=_f.getFullYear()+"-"+("0"+(_f.getMonth()+1)).slice(-2)+"-"+("0"+_f.getDate()).slice(-2);
+  if((x.md&&x.md<_t)||(x.ci&&x.ci<_fl)) return;
   var c=el("section","cx"+(x.mode==="portal"?" go":""));
   c.appendChild(el("h3",null,"کلاسِ "+x.cl+" برگزار نمی‌شود"));
-  c.appendChild(el("p",null,"این کلاس به‌دلیلِ عذرِ استاد برگزار نخواهد شد. این موضوع هیچ تأثیری در سوابقِ حضور و شمارشِ جلساتِ شما ندارد."));
+  if(x.tx && x.mode!=="portal"){ String(x.tx).split("\n").forEach(function(ln){ if(ln.trim()) c.appendChild(el("p",null,ln)); }); }
+  else c.appendChild(el("p",null,"این کلاس به‌دلیلِ عذرِ استاد برگزار نخواهد شد. این موضوع هیچ تأثیری در سوابقِ حضور و شمارشِ جلساتِ شما ندارد."));
   if(x.mode==="date"&&x.ml){ c.appendChild(el("p","ok","جبرانی: "+x.ml)); }
   if(x.mode==="portal"){
    c.appendChild(el("p",null,"برای جبرانِ این جلسه، روزِ "+x.ml+" در نظر گرفته شده است. ساعتِ مناسبِ خود را انتخاب و تأیید کنید."));
@@ -345,6 +416,7 @@ function viewHome(){
   bx.appendChild(el("span",null,k.expired?"ترمِ شما تمام شده؛ برای ادامهٔ کلاس‌ها با آموزشگاه هماهنگ کنید.":("فقط "+fa(k.remaining)+" جلسه باقی مانده است؛ برای تمدید با آموزشگاه هماهنگ کنید.")));
   bn.appendChild(bx); app.appendChild(bn);
  }
+ renderMsgs(app,k);
  renderCx(app,k);
  /* next session */
  if(!k.expired&&k.nextLabel){
@@ -382,6 +454,7 @@ function viewHome(){
   });
   tc.appendChild(ul); app.appendChild(tc);
  }
+ renderServices(app,k);
  /* info */
  var ic2=el("section","card"); var h3=el("div","card-h"); h3.style.padding="16px 16px 6px"; h3.appendChild(svg(IC.info)); h3.appendChild(el("span",null,"اطلاعاتِ ترم")); ic2.appendChild(h3);
  [["نوعِ دوره",k.course],["شروعِ ترم",k.start],["پایانِ ترم",k.end],["وضعیتِ گروه‌نوازی",k.group]].forEach(function(x){ if(!x[1]) return; var r=el("div","kv"); r.appendChild(el("span",null,x[0])); r.appendChild(el("b",null,x[1])); ic2.appendChild(r); });
