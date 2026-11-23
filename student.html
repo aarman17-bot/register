@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="fa" dir="rtl"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0A0806">
+<meta name="theme-color" content="#0A0806"><meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
 <title>پنل هنرجو — آموزشگاه موسیقی ایران</title>
 <style>
 :root{--cream:#12100C;--surface:#1B1712;--surface2:#221C13;--ink:#F3E9D2;--ink-soft:#B8A47C;--line:#4A3D22;--gold:#D4A03C;--gold-hi:#F6D77A;--gold-lo:#B8842E;--gold-bg:#2E2410;--amber:#F0C868;--ok:#6FBF8E;--bad:#D9695C;--stage:#0A0806}
@@ -554,6 +554,7 @@ function viewHome0(){
  var ft=$("foot"); clr(ft);
  if(S.at){ var dt=new Date(S.at); if(!isNaN(dt)){ try{ ft.appendChild(el("div",null,"آخرین به‌روزرسانی: "+new Intl.DateTimeFormat("fa-IR",{dateStyle:"medium",timeStyle:"short"}).format(dt))); }catch(e){} } }
  ft.appendChild(el("div",null,"اطلاعاتِ این صفحه فقط برای شما نمایش داده می‌شود."));
+ ft.appendChild(el("div","soft","نسخهٔ صفحه: ۵"));
  var lo=el("button","link","خروج"); lo.type="button"; lo.onclick=logout; ft.appendChild(lo);
 }
 function addToCalendar(k){
