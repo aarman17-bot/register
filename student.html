@@ -350,8 +350,8 @@ function money(n){ return fa(String(Math.round(Math.abs(+n)||0)).replace(/\B(?=(
 function renderRenewPay(app,k){
  if(S.offline||!k.sid) return;
  var pay=S.pay; if(!pay){ try{ pay=JSON.parse(lsGet("pay")||"null"); }catch(e){} }
- if(!pay||!pay.card) return;
- if(!(k.expired||k.remaining<=3)) return;
+ pay=pay||{};
+ if(!(k.expired||k.remaining<=1)) return;
  var c=el("section","cx"); c.id="sec-renew";
  c.appendChild(el("h3",null,"تمدید آنلاین ترم"));
  var plan="تمدید ترم"+(k.course?(" "+k.course):"")+(k.instrument?(" — "+k.instrument):"");
@@ -366,12 +366,13 @@ function renderRenewPay(app,k){
  var ol=el("ol","stp");
  ["واریز مبلغ ترم به شمارهٔ کارت زیر","گرفتن عکس یا اسکرین‌شاتِ فیش","ارسال فیش با دکمهٔ پایین","بررسی توسط آموزشگاه و اعمالِ تمدید"].forEach(function(t,i){ var li=el("li"); li.appendChild(el("i",null,fa(i+1))); li.appendChild(el("span",null,t)); ol.appendChild(li); });
  c.appendChild(ol);
- c.appendChild(el("p",null,"واریز به کارت (ترجیحاً کارت‌به‌کارت):"));
+ if(!pay.card){ c.appendChild(el("p","soft","شمارهٔ کارت را از آموزشگاه دریافت کنید و سپس فیش را همین‌جا ارسال نمایید.")); }
+ else { c.appendChild(el("p",null,"واریز به کارت (ترجیحاً کارت‌به‌کارت):"));
  var cn=el("p","soft",pay.card); cn.style.cssText="direction:ltr;text-align:center;font-size:20px;letter-spacing:1px;font-weight:700;margin:6px 0"; c.appendChild(cn);
  if(pay.owner) c.appendChild(el("p","soft","به نام: "+pay.owner));
  var cp=el("button","btn ghost","کپی شمارهٔ کارت"); cp.type="button";
  cp.onclick=function(){ var t=String(pay.card).replace(/[^0-9]/g,""); var done=function(){ cp.textContent="کپی شد ✓"; }; try{ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(done,done); return; } }catch(e){} done(); };
- c.appendChild(cp);
+ c.appendChild(cp); }
  if(pay.note) c.appendChild(el("p","soft",pay.note));
  var sb=el("button","btn","ارسال فیش و درخواست تمدید"); sb.type="button";
  sb.onclick=function(){ openReq(k,"receipt",c,{amt:(due||pr)?String(due||pr):"",text:"فیش "+plan}); };
@@ -382,10 +383,12 @@ function renderFin(app,k){
  if(S.offline||!k.fin) return;
  var f=k.fin, pays=f.pays||[];
  pays=pays.filter(function(p){ return !/حقوق|معلم|استاد/.test(String(p&&p.t||"")); }); f=Object.assign({},f,{pays:pays});
- if(!f.net&&!pays.length) return;
+ var pendR=(k.reqs||[]).filter(function(r){ return r.kind==="receipt"&&r.st==="new"; })[0];
+ if(!f.net&&!pays.length&&!pendR) return;
  var c=el("section","cx"); c.id="sec-fin";
  c.appendChild(el("h3",null,"وضعیت مالی"));
- if(f.net>0){ var d=el("p","err","بدهی: "+money(f.net)+" تومان"); d.style.minHeight="0"; c.appendChild(d); }
+ if(pendR){ var pp=el("p","soft","فیش واریزی شما ارسال شده و در انتظار تأیید آموزشگاه است؛ پس از تأیید، وضعیت حساب شما به‌روزرسانی می‌شود."); c.appendChild(pp); }
+ else if(f.net>0){ var d=el("p","err","بدهی: "+money(f.net)+" تومان"); d.style.minHeight="0"; c.appendChild(d); }
  else if(f.net<0) c.appendChild(el("p","ok","بستانکاری: "+money(f.net)+" تومان (از شهریهٔ بعدی کسر می‌شود)"));
  else c.appendChild(el("p","ok","حساب شما تسویه است ✓"));
  pays.filter(function(p){ return !/حقوق|معلم|استاد/.test(String(p&&p.t||"")); }).slice(0,6).forEach(function(p){ c.appendChild(el("p","soft",(p.d||"")+" — "+(p.t||"")+" — "+money(p.a)+" تومان")); });
@@ -483,19 +486,16 @@ function viewHome0(){
  app.appendChild(hero);
  setTimeout(function(){ var a=sv.querySelector(".arc"); if(a) a.setAttribute("stroke-dashoffset",String(C*(1-pas/tot))); },80);
  /* banner */
- if(k.expired||(k.remaining!=null&&k.remaining<=2)){
+ if(k.expired||(k.remaining!=null&&k.remaining<=1)){
   var bn=el("div","ban"); bn.appendChild(svg(IC.bell));
-  var urgent=!!(k.expired||k.remaining<=1), bt, bs, bn0="";
+  var urgent=!!(k.expired||k.remaining<=1), bt, bs;
   if(k.expired){ bt="ترمِ شما به پایان رسیده است"; bs="برای ادامهٔ کلاس‌ها، همین حالا تمدید کنید."; }
-  else if(urgent){ bt="موعد تمدید شما فرا رسیده است"; bs="لطفاً برای حفظ زمان کلاس خود، تمدید را همین حالا انجام دهید."; bn0="لطفاً برای حفظ زمان کلاس خود، تمدید را همین حالا با آموزشگاه هماهنگ کنید."; }
-  else { bt="ترمِ شما رو به پایان است"; bs="می‌توانید از همین حالا تمدید کنید تا ساعت و استادِ فعلی‌تان برای ترمِ بعد حفظ شود."; }
+  else { bt="موعد تمدید شما فرا رسیده است"; bs="لطفاً برای حفظ زمان کلاس خود، تمدید را همین حالا انجام دهید."; }
   var bx=el("div"); bx.appendChild(el("b",null,bt));
-  bx.appendChild(el("span",null,bn0||(bs+" برای تمدید با آموزشگاه هماهنگ کنید.")));
-  var _rp=S.pay; if(!_rp){ try{ _rp=JSON.parse(lsGet("pay")||"null"); }catch(e){} }
-  if(!S.offline&&k.sid&&_rp&&_rp.card){
+  bx.appendChild(el("span",null,bs));
+  if(!S.offline&&k.sid){
    bn.className="ban tap"; bn.setAttribute("role","button"); bn.tabIndex=0;
-   bx.querySelector("span").textContent=bs;
-   bx.appendChild(el("div","cta","جهت تمدید از اینجا اقدام فرمایید ‹"));
+   bx.appendChild(el("div","cta","از اینجا اقدام فرمایید ‹"));
    var goRen=function(){ var t=document.getElementById("sec-renew"); if(!t) return; t.scrollIntoView({behavior:"smooth",block:"start"}); t.classList.remove("pulse"); void t.offsetWidth; t.classList.add("pulse"); };
    bn.onclick=goRen; bn.onkeydown=function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); goRen(); } };
   }
