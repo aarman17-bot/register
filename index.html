@@ -442,7 +442,7 @@ function r4(b){
 function submit(){
  var nb=$("bNext"), er=$("kf-err2"); if(S.hp) return; if(API.indexOf("PUT_")==0){ er.textContent="فرم هنوز راه‌اندازی نشده است."; return; }
  var pre=S.mode==="slot"?(S.teacher+" | ساعتِ انتخابی از ساعت‌های خالی (قطعی نیست)"):(S.mode==="wish"?"لیست انتظار — روز/ساعت‌های دلخواه":(S.mode==="wait"?"لیست انتظار — ساعتِ خالی نبود":""));
- var pl=S.plan?("دوره: "+planLabel(S.plan)):""; var tg=[]; if(S.mode==="slot"&&S.tid){ tg.push("k="+S.tid); tg.push("w="+S.wdk); } if(S.plan&&D&&D.rates&&D.rates[S.plan]){ tg.push("c="+S.plan); tg.push("p="+D.rates[S.plan].price); } var tag=tg.length?("⟦"+tg.join(";")+"⟧ "):""; var pd=(hasPay()&&S.paid)?"پرداخت کارت‌به‌کارت: اعلام شد (رسید ارسال می‌شود)":""; var note=(tag+[pre,pl,pd].filter(Boolean).join(" | ")).slice(0,500);
+ var pl=S.plan?("دوره: "+planLabel(S.plan)):""; var tg=[]; if(S.mode==="slot"&&S.tid){ tg.push("k="+S.tid); tg.push("w="+S.wdk); } if(S.plan&&D&&D.rates&&D.rates[S.plan]){ tg.push("c="+S.plan); tg.push("p="+D.rates[S.plan].price); } var tag=tg.length?("⟦"+tg.join(";")+"⟧ "):""; var pd=(hasPay()&&S.paid)?"پرداخت کارت‌به‌کارت: اعلام شد (رسید ارسال می‌شود)":""; var srcQ=(/[?&]src=(\w{1,12})/.exec(location.search)||[])[1]||""; var note=(tag+[pre,pl,pd,srcQ?("منبع: "+srcQ):""].filter(Boolean).join(" | ")).slice(0,500);
  nb.disabled=true; nb.textContent="در حال ارسال…";
  call({a:"reg",name:S.name,phone:S.phone,instrument:S.ins,day:S.day,time:S.time,birth:S.birth||"",note:note})
  .then(function(r){ if(!r.ok) throw 0; var rid=String(r.id||r.regId||r.code||"").replace(/[^0-9a-zA-Z]/g,"").slice(-4).toUpperCase(); S.code=rid; showDone(); })
