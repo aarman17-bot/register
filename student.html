@@ -391,7 +391,7 @@ function renderFin(app,k){
  if(pendR){ var pp=el("p","soft","فیش واریزی شما ارسال شده و در انتظار تأیید آموزشگاه است؛ پس از تأیید، وضعیت حساب شما به‌روزرسانی می‌شود."); c.appendChild(pp); }
  else if(f.net>0){ var d=el("p","err","بدهی: "+money(f.net)+" تومان"); d.style.minHeight="0"; c.appendChild(d); }
  else if(f.net<0) c.appendChild(el("p","ok","بستانکاری: "+money(f.net)+" تومان (از شهریهٔ بعدی کسر می‌شود)"));
- else if(k.expired||(k.remaining!=null&&k.remaining<=1)) c.appendChild(el("p","ok","بدهیِ معوقه‌ای ندارید. برای ادامهٔ کلاس‌ها، ترمِ جدید را از بخش «تمدید آنلاین ترم» تمدید کنید."));
+ else if(k.expired||(k.remaining!=null&&k.remaining<=1)) { var _np=el("p",null,"بدهیِ معوقه‌ای ندارید. برای ادامهٔ کلاس‌ها، ترمِ جدید را از بخش «تمدید آنلاین ترم» تمدید کنید."); _np.style.color="var(--amber)"; c.appendChild(_np); }
   else c.appendChild(el("p","ok","حساب شما تسویه است ✓"));
  if(!pendR&&(k.expired||(k.remaining!=null&&k.remaining<=1))&&k.renew&&k.renew.price){
   var np=+k.renew.price, ncr=f.net<0?-f.net:0, nd=Math.max(0,np-ncr);
@@ -523,13 +523,17 @@ function viewHome0(){
  chip("note",k.instrument); chip("user",k.teacher); chip("clock",[k.day,k.time].filter(Boolean).join(" · ساعت "));
  hero.appendChild(ch);
  var tot=Math.max(1,k.total||1), pas=Math.min(k.passed||0,tot), R=78, C=2*Math.PI*R;
+ var rmn=(k.remaining==null)?99:k.remaining, TN=["#FBE6AE","#D4A03C","#B8842E"], glow="rgba(246,215,122,.45)";
+ if(k.expired){ TN=["#CDBFA3","#8C7B5A","#5E5039"]; glow="rgba(140,123,90,.25)"; }
+ else if(rmn<=1){ TN=["#FFC1B6","#D9695C","#A33F33"]; glow="rgba(217,105,92,.55)"; }
+ else if(rmn===2){ TN=["#FFE0A8","#F0932B","#C26A10"]; glow="rgba(240,147,43,.5)"; }
  var rw=el("div","ring");
  var sv=document.createElementNS("http://www.w3.org/2000/svg","svg"); sv.setAttribute("viewBox","0 0 176 176");
- sv.innerHTML='<defs><linearGradient id="gg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FBE6AE"/><stop offset=".55" stop-color="#D4A03C"/><stop offset="1" stop-color="#B8842E"/></linearGradient></defs><circle class="trk" cx="88" cy="88" r="'+R+'" fill="none" stroke-width="11"/><circle class="arc" cx="88" cy="88" r="'+R+'" fill="none" stroke-width="11" stroke-dasharray="'+C+'" stroke-dashoffset="'+C+'"/>';
- rw.appendChild(sv);
- var mid=el("div","mid"); var big=el("div","big",pas>0?fa(pas):"شروع"); if(pas===0) big.style.fontSize="30px"; mid.appendChild(big); mid.appendChild(el("div","of",pas>0?("از "+fa(tot)+" جلسه"):("ترمِ تازه · "+fa(tot)+" جلسه"))); rw.appendChild(mid);
+ sv.innerHTML='<defs><linearGradient id="gg" x1="0" y1="0" x2="1" y2="1">'+TN.map(function(c,i){ return '<stop offset="'+[0,.55,1][i]+'" stop-color="'+c+'"/>'; }).join("")+'</linearGradient></defs><circle class="trk" cx="88" cy="88" r="'+R+'" fill="none" stroke-width="11"/><circle class="arc" cx="88" cy="88" r="'+R+'" fill="none" stroke-width="11" stroke-dasharray="'+C+'" stroke-dashoffset="'+C+'"/>';
+ rw.appendChild(sv); var _ar=sv.querySelector(".arc"); if(_ar) _ar.style.filter="drop-shadow(0 0 6px "+glow+")";
+ var mid=el("div","mid"); var big=el("div","big",k.expired?"پایان ترم":(pas>0?fa(pas):"شروع")); if(pas===0||k.expired) big.style.fontSize="30px"; mid.appendChild(big); mid.appendChild(el("div","of",k.expired?(fa(pas)+" از "+fa(tot)+" جلسه"):(pas>0?("از "+fa(tot)+" جلسه"):("ترمِ تازه · "+fa(tot)+" جلسه")))); rw.appendChild(mid);
  hero.appendChild(rw);
- var rm=el("div","rem"); if(k.expired){ rm.textContent="ترمِ فعلی به پایان رسیده است"; } else { rm.appendChild(document.createTextNode("")); rm.appendChild(el("b",null,fa(k.remaining))); rm.appendChild(document.createTextNode(" جلسه تا پایانِ ترم باقی مانده")); }
+ var rm=el("div","rem"); if(k.expired){ rm.textContent="ترمِ فعلی به پایان رسیده است"; } else { rm.appendChild(document.createTextNode("")); var _rb=el("b",null,fa(k.remaining)); if(rmn<=2) _rb.style.color=TN[1]; rm.appendChild(_rb); rm.appendChild(document.createTextNode(" جلسه تا پایانِ ترم باقی مانده")); }
  hero.appendChild(rm);
  app.appendChild(hero);
  setTimeout(function(){ var a=sv.querySelector(".arc"); if(a) a.setAttribute("stroke-dashoffset",String(C*(1-pas/tot))); },80);
@@ -551,7 +555,7 @@ function viewHome0(){
    if(!S.offline&&k.sid&&("IntersectionObserver" in window)&&!(k.reqs||[]).some(function(r){ return r.kind==="receipt"&&r.st==="new"; })){
     var fb=el("button","btn","تمدید ترم"); fb.type="button"; fb.style.cssText="position:fixed;left:16px;right:16px;bottom:16px;width:auto;margin:0;z-index:20;display:none;box-shadow:0 8px 26px rgba(0,0,0,.6)";
     fb.onclick=function(){ if(goRen) goRen(); }; app.appendChild(fb);
-    setTimeout(function(){ var t=document.getElementById("sec-renew"); if(!t) return; var io=new IntersectionObserver(function(es){ if(!fb.isConnected){ io.disconnect(); return; } fb.style.display=es[0].isIntersecting?"none":"flex"; }); io.observe(t); },0);
+    setTimeout(function(){ var t=document.getElementById("sec-renew"); if(!t) return; var vis={}; bn.id="ban-renew"; var io=new IntersectionObserver(function(es){ if(!fb.isConnected){ io.disconnect(); return; } es.forEach(function(e){ vis[e.target.id]=e.isIntersecting; }); fb.style.display=(vis["sec-renew"]||vis["ban-renew"])?"none":"flex"; }); io.observe(t); io.observe(bn); },0);
    }
  }
  renderMsgs(app,k);
