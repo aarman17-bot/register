@@ -135,6 +135,7 @@ main{max-width:480px;margin:0 auto;padding:6px 14px 0}
 
 <script>
 var API = "https://script.google.com/macros/s/AKfycbxLF0ZX8f2cnOAkdh8OjGAMwYilsGdrqMslVVgL_ipTWOfDe5s0Xz-tbSFUbl695EdT/exec";
+var CID=(function(){ var c=""; try{ c=localStorage.getItem("cid")||""; }catch(e){} if(!c){ var a="abcdefghijklmnopqrstuvwxyz0123456789"; for(var i=0;i<20;i++) c+=a.charAt(Math.floor(Math.random()*a.length)); try{ localStorage.setItem("cid",c); }catch(e){} } return c; })();
 var FA = "۰۱۲۳۴۵۶۷۸۹";
 function fa(s){ return String(s).replace(/\d/g,function(d){ return FA[d]; }); }
 function en(s){ return String(s||"").replace(/[۰-۹]/g,function(c){ return FA.indexOf(c); }).replace(/[٠-٩]/g,function(c){ return "٠١٢٣٤٥٦٧٨٩".indexOf(c); }); }
@@ -212,7 +213,9 @@ function viewLogin(msg){
  bt.addEventListener("click",go);
  pins[0].focus();
 }
+function authOf(){ return S.tok?{lk:S.tok}:{dg4:S.pin}; }
 function post(o){
+ o.cid=CID;
  var ctl=("AbortController" in window)?new AbortController():null, to=setTimeout(function(){ if(ctl) ctl.abort(); },15000);
  return fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(o),signal:ctl?ctl.signal:undefined}).then(function(r){ clearTimeout(to); return r.json(); });
 }
@@ -232,9 +235,9 @@ function doLogin(pin,fam,remember,silent){
  return post({a:"portal",dg4:pin,fam:fam||""}).then(function(r){
   if(r&&r.ok&&r.pick&&r.pick.length){ viewPick(r.pick,pin,remember); return; }
   if(r&&r.ok&&r.data&&r.data.kids&&r.data.kids.length){
-   S.kids=r.data.kids; S.pin=pin; S.fam=r.data.fam||fam||""; S.at=r.data.at||null; S.links=r.data.links||null; if(S.links) lsSet("links",JSON.stringify(S.links)); S.offline=false; S.idx=Math.max(0,Math.min(r.data.me||0,S.kids.length-1));
+   S.kids=r.data.kids; S.pin=pin; S.tok=r.data.st||null; S.pay=r.data.pay||null; if(S.pay) lsSet("pay",JSON.stringify(S.pay)); S.fam=r.data.fam||fam||""; S.at=r.data.at||null; S.links=r.data.links||null; if(S.links) lsSet("links",JSON.stringify(S.links)); S.offline=false; S.idx=Math.max(0,Math.min(r.data.me||0,S.kids.length-1));
    lsSet("cache",JSON.stringify({kids:S.kids,at:S.at,idx:S.idx}));
-   if(remember) lsSet("rem",JSON.stringify({k:pin,f:fam||(r.data.fam||"")})); else lsDel("rem");
+   if(remember) lsSet("rem",JSON.stringify(S.tok?{t:S.tok}:{k:pin,f:fam||(r.data.fam||"")})); else lsDel("rem");
    viewHome(); return;
   }
   if(r&&r.err==="locked") throw "تعدادِ تلاش‌ها زیاد بود. چند دقیقه بعد دوباره امتحان کنید.";
@@ -247,6 +250,26 @@ function doLogin(pin,fam,remember,silent){
   throw "اتصال به اینترنت برقرار نیست.";
  });
 }
+function doTokLogin(lk,remember,silent){
+ return post({a:"portal",lk:lk}).then(function(r){
+  if(r&&r.ok&&r.data&&r.data.kids&&r.data.kids.length){
+   S.kids=r.data.kids; S.pin=""; S.tok=r.data.st||lk; S.pay=r.data.pay||null; if(S.pay) lsSet("pay",JSON.stringify(S.pay)); S.fam=r.data.fam||""; S.at=r.data.at||null; S.links=r.data.links||null; if(S.links) lsSet("links",JSON.stringify(S.links)); S.offline=false; S.idx=Math.max(0,Math.min(r.data.me||0,S.kids.length-1));
+   lsSet("cache",JSON.stringify({kids:S.kids,at:S.at,idx:S.idx}));
+   if(remember) lsSet("rem",JSON.stringify({t:S.tok})); else lsDel("rem");
+   viewHome(); return;
+  }
+  if(r&&r.err==="exp") throw "این لینک منقضی شده است. با ۴ رقمِ آخرِ موبایل وارد شوید.";
+  if(r&&r.err==="locked") throw "تعدادِ تلاش‌ها زیاد بود. چند دقیقه بعد دوباره امتحان کنید.";
+  if(r&&r.err==="nodata") throw "اطلاعاتِ پنل هنوز منتشر نشده است. کمی بعد دوباره امتحان کنید.";
+  lsDel("rem");
+  throw "لینک معتبر نیست. با ۴ رقمِ آخرِ موبایل وارد شوید.";
+ },function(e){
+  if(typeof e==="string") throw e;
+  var c=lsGet("cache"), rm=lsGet("rem");
+  if(c&&rm&&silent){ try{ var o=JSON.parse(c); S.kids=o.kids; S.at=o.at; S.tok=lk; S.offline=true; S.idx=o.idx||0; viewHome(); return; }catch(x){} }
+  throw "اتصال به اینترنت برقرار نیست.";
+ });
+}
 function logout(){ lsDel("rem"); lsDel("cache"); S={kids:[],idx:0,at:null,offline:false}; viewLogin(); }
 
 /* ---- صفحهٔ اصلی ---- */
@@ -254,13 +277,13 @@ function daysFrom(iso){ if(!iso) return null; var p=iso.split("-"); var d=new Da
 function cdText(n){ if(n==null) return ""; if(n<=0) return n===0?"امروز":""; if(n===1) return "فردا"; return fa(n)+" روز دیگر"; }
 function hm(t){ var p=String(t||"").split(":"); return (+p[0]||0)*60+(+p[1]||0); }
 function mm(n){ return ("0"+Math.floor(n/60)).slice(-2)+":"+("0"+(n%60)).slice(-2); }
-function cxSlots(x){ var out=[], f=hm(x.from), e=hm(x.to), sl=x.slot||30; for(var t=f;t+sl<=e;t+=sl) out.push(mm(t)); return out; }
+function cxSlots(x){ var out=[], f=hm(x.from), e=hm(x.to), sl=x.slot||30, bz=x.busy||[]; for(var t=f;t+sl<=e;t+=sl){ var m=mm(t); if(bz.indexOf(m)<0) out.push(m); } return out; }
 function bookSlot(k,x,t,box){
  var er=box.querySelector(".err"); if(er) er.textContent="";
  var btns=box.querySelectorAll("button"); btns.forEach(function(b){ b.disabled=true; });
- post({a:"portal",op:"book",dg4:S.pin,fam:S.fam,sid:k.sid,offer:x.id,t:t}).then(function(r){
+ post(Object.assign({a:"portal",op:"book",fam:S.fam,sid:k.sid,offer:x.id,t:t},authOf())).then(function(r){
   if(r&&r.ok){ x.mine=r.mine; x.taken=r.taken||x.taken||[]; try{ lsSet("cache",JSON.stringify({kids:S.kids,at:S.at,idx:S.idx})); }catch(e){} viewHome(); return; }
-  var m = r&&r.err==="taken" ? "این ساعت همین حالا توسط شخص دیگری انتخاب شد؛ ساعتِ دیگری را انتخاب کنید." : r&&r.err==="late" ? "زمانِ انتخاب برای این جبرانی گذشته است." : r&&r.err==="gone" ? "این جبرانی دیگر فعال نیست؛ صفحه را دوباره باز کنید." : r&&r.err==="locked" ? "تعدادِ تلاش‌ها زیاد بود؛ چند دقیقه بعد دوباره امتحان کنید." : "ثبت انجام نشد؛ دوباره تلاش کنید.";
+  var m = r&&r.err==="taken" ? "این ساعت همین حالا توسط شخص دیگری انتخاب شد؛ ساعتِ دیگری را انتخاب کنید." : r&&r.err==="late" ? "زمانِ انتخاب برای این جبرانی گذشته است." : r&&r.err==="busy" ? "این ساعت در دسترس نیست؛ ساعتِ دیگری را انتخاب کنید." : r&&r.err==="gone" ? "این جبرانی دیگر فعال نیست؛ صفحه را دوباره باز کنید." : r&&r.err==="locked" ? "تعدادِ تلاش‌ها زیاد بود؛ چند دقیقه بعد دوباره امتحان کنید." : "ثبت انجام نشد؛ دوباره تلاش کنید.";
   if(r&&r.taken) x.taken=r.taken;
   if(r&&r.err==="taken"){ x._sel=null; viewHome(); }
   else { btns.forEach(function(b){ b.disabled=false; }); if(er) er.textContent=m; }
@@ -291,7 +314,7 @@ function compressImg(file,cb){
  }; im.onerror=function(){ cb(null); }; im.src=fr.result; };
  fr.onerror=function(){ cb(null); }; fr.readAsDataURL(file);
 }
-function openReq(k,kind,card){
+function openReq(k,kind,card,pre){
  clr(card);
  card.appendChild(el("h3",null,REQ_L[kind]));
  var ta=el("textarea"); ta.rows=4; ta.maxLength=500; ta.placeholder=REQ_H[kind]; ta.style.cssText="width:100%;margin-top:8px;padding:10px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface2);color:var(--ink)";
@@ -299,6 +322,7 @@ function openReq(k,kind,card){
  var amt=null, fi=null, img=null;
  if(kind==="receipt"){
   amt=el("input"); amt.placeholder="مبلغ واریزی (تومان)"; amt.inputMode="numeric"; amt.style.cssText="width:100%;margin-top:8px;padding:10px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface2);color:var(--ink)"; card.appendChild(amt);
+  if(pre&&pre.amt) amt.value=fa(pre.amt); if(pre&&pre.text) ta.value=pre.text;
   fi=el("input"); fi.type="file"; fi.accept="image/*"; fi.style.marginTop="8px"; card.appendChild(fi);
   var st=el("p","soft","تصویر فیش را انتخاب کنید."); card.appendChild(st);
   fi.onchange=function(){ img=null; if(!fi.files[0]) return; st.textContent="در حال آماده‌سازی تصویر..."; compressImg(fi.files[0],function(o){ img=o; st.textContent=o?"تصویر آماده ارسال است.":"تصویر قابل استفاده نیست؛ تصویر دیگری انتخاب کنید."; }); };
@@ -312,12 +336,46 @@ function openReq(k,kind,card){
   if(kind==="receipt"&&!img){ er.textContent="لطفاً تصویر فیش را انتخاب کنید."; return; }
   if((kind==="other"||kind==="move"||kind==="absent")&&!tx){ er.textContent="لطفاً توضیحات را بنویسید."; return; }
   ok.disabled=true; cn.disabled=true; ok.textContent="در حال ارسال...";
-  post({a:"portal",op:"req",dg4:S.pin,fam:S.fam,sid:k.sid,kind:kind,text:tx,amt:amt?en(amt.value).replace(/\D/g,""):"",img:img||""}).then(function(r){
+  post(Object.assign({a:"portal",op:"req",fam:S.fam,sid:k.sid,kind:kind,text:tx,amt:amt?en(amt.value).replace(/\D/g,""):"",img:img||""},authOf())).then(function(r){
    if(r&&r.ok){ k.reqs=(k.reqs||[]).concat([r.req]); try{ lsSet("cache",JSON.stringify({kids:S.kids,at:S.at,idx:S.idx})); }catch(e){} viewHome(); return; }
    var m=r&&r.err==="dup"?"درخواست مشابهی از شما در حال بررسی است.":r&&r.err==="many"?"تعداد درخواست‌های در حال بررسی زیاد است؛ لطفاً منتظر پاسخ بمانید.":r&&r.err==="big"?"حجم تصویر زیاد است.":"ثبت درخواست انجام نشد؛ دوباره تلاش کنید.";
    er.textContent=m; ok.disabled=false; cn.disabled=false; ok.textContent="ثبت درخواست";
   },function(){ er.textContent="اتصال به اینترنت برقرار نیست."; ok.disabled=false; cn.disabled=false; ok.textContent="ثبت درخواست"; });
  };
+}
+function money(n){ return fa(String(Math.round(Math.abs(+n)||0)).replace(/\B(?=(\d{3})+(?!\d))/g,"،")); }
+function renderRenewPay(app,k){
+ if(S.offline||!k.sid) return;
+ var pay=S.pay; if(!pay){ try{ pay=JSON.parse(lsGet("pay")||"null"); }catch(e){} }
+ if(!pay||!pay.card) return;
+ if(!(k.expired||k.remaining<=3)) return;
+ var c=el("section","cx"); c.id="sec-renew";
+ c.appendChild(el("h3",null,"تمدید آنلاین ترم"));
+ var pr=(k.renew&&k.renew.price)?+k.renew.price:0, cr=(k.fin&&k.fin.net<0)?-k.fin.net:0, due=Math.max(0,pr-cr);
+ if(pr) c.appendChild(el("p",null,"شهریهٔ ترمِ جدید: "+money(pr)+" تومان"+(cr?(" — بستانکاری شما: "+money(cr)+" تومان — مبلغِ قابلِ واریز: "+money(due)+" تومان"):"")));
+ c.appendChild(el("p",null,"واریز به کارت (ترجیحاً کارت‌به‌کارت):"));
+ var cn=el("p","soft",pay.card); cn.style.cssText="direction:ltr;text-align:center;font-size:20px;letter-spacing:1px;font-weight:700;margin:6px 0"; c.appendChild(cn);
+ if(pay.owner) c.appendChild(el("p","soft","به نام: "+pay.owner));
+ var cp=el("button","btn ghost","کپی شمارهٔ کارت"); cp.type="button";
+ cp.onclick=function(){ var t=String(pay.card).replace(/[^0-9]/g,""); var done=function(){ cp.textContent="کپی شد ✓"; }; try{ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(done,done); return; } }catch(e){} done(); };
+ c.appendChild(cp);
+ if(pay.note) c.appendChild(el("p","soft",pay.note));
+ var sb=el("button","btn","ارسال فیش و درخواست تمدید"); sb.type="button";
+ sb.onclick=function(){ openReq(k,"receipt",c,{amt:(due||pr)?String(due||pr):"",text:"فیش تمدید ترم"}); };
+ c.appendChild(sb);
+ app.appendChild(c);
+}
+function renderFin(app,k){
+ if(S.offline||!k.fin) return;
+ var f=k.fin, pays=f.pays||[];
+ if(!f.net&&!pays.length) return;
+ var c=el("section","cx"); c.id="sec-fin";
+ c.appendChild(el("h3",null,"وضعیت مالی"));
+ if(f.net>0){ var d=el("p","err","بدهی: "+money(f.net)+" تومان"); d.style.minHeight="0"; c.appendChild(d); }
+ else if(f.net<0) c.appendChild(el("p","ok","بستانکاری: "+money(f.net)+" تومان (از شهریهٔ بعدی کسر می‌شود)"));
+ else c.appendChild(el("p","ok","حساب شما تسویه است ✓"));
+ pays.slice(0,6).forEach(function(p){ c.appendChild(el("p","soft",(p.d||"")+" — "+(p.t||"")+" — "+money(p.a)+" تومان")); });
+ app.appendChild(c);
 }
 function renderServices(app,k){
  if(S.offline||!k.sid) return;
@@ -327,7 +385,7 @@ function renderServices(app,k){
   rq.forEach(function(r){ var p=el("p",null,(REQ_L[r.kind]||"")+" — "+(REQ_S[r.st]||"")); rc.appendChild(p); if(r.reply) rc.appendChild(el("p","soft","پاسخ آموزشگاه: "+r.reply)); });
   app.appendChild(rc);
  }
- var c=el("section","cx"); c.appendChild(el("h3",null,"خدمات و درخواست‌ها"));
+ var c=el("section","cx"); c.id="sec-svc"; c.appendChild(el("h3",null,"خدمات و درخواست‌ها"));
  ["onehour","group","move","absent","receipt","other"].forEach(function(kd){
   var b=el("button","btn ghost",REQ_L[kd]); b.type="button"; b.onclick=function(){ openReq(k,kd,c); }; c.appendChild(b);
  });
@@ -339,7 +397,7 @@ function renderCx(app,k){
  (k.cx||[]).forEach(function(x){
   var _n=new Date(), _t=_n.getFullYear()+"-"+("0"+(_n.getMonth()+1)).slice(-2)+"-"+("0"+_n.getDate()).slice(-2), _f=new Date(_n.getTime()-21*86400000), _fl=_f.getFullYear()+"-"+("0"+(_f.getMonth()+1)).slice(-2)+"-"+("0"+_f.getDate()).slice(-2);
   if((x.md&&x.md<_t)||(x.ci&&x.ci<_fl)) return;
-  var c=el("section","cx"+(x.mode==="portal"?" go":""));
+  var c=el("section","cx"+(x.mode==="portal"?" go":"")); if(x.mode==="portal"&&!document.getElementById("sec-makeup")) c.id="sec-makeup";
   c.appendChild(el("h3",null,"کلاسِ "+x.cl+" برگزار نمی‌شود"));
   if(x.tx && x.mode!=="portal"){ String(x.tx).split("\n").forEach(function(ln){ if(ln.trim()) c.appendChild(el("p",null,ln)); }); }
   else c.appendChild(el("p",null,"این کلاس به‌دلیلِ عذرِ استاد برگزار نخواهد شد. این موضوع هیچ تأثیری در سوابقِ حضور و شمارشِ جلساتِ شما ندارد."));
@@ -382,7 +440,8 @@ function renderCx(app,k){
   app.appendChild(c);
  });
 }
-function viewHome(){
+function viewHome(){ viewHome0(); if(S.go){ var gid="sec-"+S.go; S.go=null; setTimeout(function(){ var t=document.getElementById(gid); if(t&&t.scrollIntoView) t.scrollIntoView({behavior:"smooth",block:"start"}); },200); } }
+function viewHome0(){
  var app=$("app"); clr(app);
  var k=S.kids[S.idx]||S.kids[0];
  if(S.kids.length>1){
@@ -417,6 +476,7 @@ function viewHome(){
   bn.appendChild(bx); app.appendChild(bn);
  }
  renderMsgs(app,k);
+ renderRenewPay(app,k);
  renderCx(app,k);
  /* next session */
  if(!k.expired&&k.nextLabel){
@@ -454,6 +514,7 @@ function viewHome(){
   });
   tc.appendChild(ul); app.appendChild(tc);
  }
+ renderFin(app,k);
  renderServices(app,k);
  /* info */
  var ic2=el("section","card"); var h3=el("div","card-h"); h3.style.padding="16px 16px 6px"; h3.appendChild(svg(IC.info)); h3.appendChild(el("span",null,"اطلاعاتِ ترم")); ic2.appendChild(h3);
@@ -485,8 +546,14 @@ function demoKids(){
 }
 (function init(){
  if(/[?&]demo=1/.test(location.search)){ S.kids=demoKids(); S.at=new Date().toISOString(); viewHome(); return; }
+ var mt=/[?&]t=([^&#]+)/.exec(location.search), mg=/[?&]go=(\w+)/.exec(location.search);
+ if(mg) S.go=mg[1];
+ if(mt){ var lk=decodeURIComponent(mt[1]); try{ history.replaceState(null,"",location.pathname); }catch(e){}
+  doTokLogin(lk,true,false).catch(function(m){ viewLogin(typeof m==="string"?m:""); }); return; }
  var rm=lsGet("rem");
- if(rm){ try{ var o=JSON.parse(rm); doLogin(o.k,o.f||"",true,true).catch(function(){ viewLogin(); }); return; }catch(e){} }
+ if(rm){ try{ var o=JSON.parse(rm);
+  if(o.t){ doTokLogin(o.t,true,true).catch(function(m){ viewLogin(typeof m==="string"?m:""); }); return; }
+  doLogin(o.k,o.f||"",true,true).catch(function(){ viewLogin(); }); return; }catch(e){} }
  viewLogin();
 })();
 </script>
