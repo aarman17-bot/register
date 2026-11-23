@@ -391,8 +391,18 @@ function renderFin(app,k){
  if(pendR){ var pp=el("p","soft","فیش واریزی شما ارسال شده و در انتظار تأیید آموزشگاه است؛ پس از تأیید، وضعیت حساب شما به‌روزرسانی می‌شود."); c.appendChild(pp); }
  else if(f.net>0){ var d=el("p","err","بدهی: "+money(f.net)+" تومان"); d.style.minHeight="0"; c.appendChild(d); }
  else if(f.net<0) c.appendChild(el("p","ok","بستانکاری: "+money(f.net)+" تومان (از شهریهٔ بعدی کسر می‌شود)"));
- else c.appendChild(el("p","ok","حساب شما تسویه است ✓"));
- pays.filter(function(p){ return !/حقوق|معلم|استاد/.test(String(p&&p.t||"")); }).slice(0,6).forEach(function(p){ c.appendChild(el("p","soft",(p.d||"")+" — "+(p.t||"")+" — "+money(p.a)+" تومان")); });
+ else if(k.expired||(k.remaining!=null&&k.remaining<=1)) c.appendChild(el("p","ok","بدهیِ معوقه‌ای ندارید. برای ادامهٔ کلاس‌ها، ترمِ جدید را از بخش «تمدید آنلاین ترم» تمدید کنید."));
+  else c.appendChild(el("p","ok","حساب شما تسویه است ✓"));
+ if(!pendR&&(k.expired||(k.remaining!=null&&k.remaining<=1))&&k.renew&&k.renew.price){
+  var np=+k.renew.price, ncr=f.net<0?-f.net:0, nd=Math.max(0,np-ncr);
+  c.appendChild(el("p",null,"شهریهٔ ترمِ جدید: "+money(np)+" تومان"+(ncr?(" — پس از کسر بستانکاری: "+money(nd)+" تومان"):"")));
+  var tb=el("button","btn ghost","رفتن به بخش تمدید"); tb.type="button";
+  tb.onclick=function(){ var t=document.getElementById("sec-renew"); if(t){ t.scrollIntoView({behavior:"smooth",block:"start"}); t.classList.remove("pulse"); void t.offsetWidth; t.classList.add("pulse"); } };
+  c.appendChild(tb);
+ }
+ var pl=pays.slice(0,6);
+ if(pl.length){ var det=el("details"); det.style.marginTop="8px"; var sm=el("summary","soft","سابقهٔ پرداخت‌ها"); sm.style.cursor="pointer"; det.appendChild(sm);
+  pl.forEach(function(p){ det.appendChild(el("p","soft","پرداخت در "+(p.d||"")+" — بابت "+(p.t||"")+": "+money(p.a)+" تومان")); }); c.appendChild(det); }
  app.appendChild(c);
 }
 function openEnsemble(k,c){
@@ -538,6 +548,11 @@ function viewHome0(){
    bn.onclick=goRen; bn.onkeydown=function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); goRen(); } };
   }
   bn.appendChild(bx); app.appendChild(bn);
+   if(!S.offline&&k.sid&&("IntersectionObserver" in window)&&!(k.reqs||[]).some(function(r){ return r.kind==="receipt"&&r.st==="new"; })){
+    var fb=el("button","btn","تمدید ترم"); fb.type="button"; fb.style.cssText="position:fixed;left:16px;right:16px;bottom:16px;width:auto;margin:0;z-index:20;display:none;box-shadow:0 8px 26px rgba(0,0,0,.6)";
+    fb.onclick=function(){ if(goRen) goRen(); }; app.appendChild(fb);
+    setTimeout(function(){ var t=document.getElementById("sec-renew"); if(!t) return; var io=new IntersectionObserver(function(es){ if(!fb.isConnected){ io.disconnect(); return; } fb.style.display=es[0].isIntersecting?"none":"flex"; }); io.observe(t); },0);
+   }
  }
  renderMsgs(app,k);
  renderRenewPay(app,k);
