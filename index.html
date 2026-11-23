@@ -195,7 +195,18 @@ reset();
 function hasPay(){ return !!(D&&D.accountNumber); }
 function hasPlans(){ return !!(D&&D.rates&&PLAN_KEYS.some(function(k){ return D.rates[k]; })); }
 function planLabel(k){ var r=D&&D.rates&&D.rates[k]; if(!r) return ""; return k==="monthly"?(r.label+" (فقط ماه اول)"):r.label; }
-function slotTxt(){ return S.mode==="slot"?(S.day+" · ساعت "+fa(S.time)):((S.day||"")+(S.time?" · "+S.time.split("، ").map(fa).join("، "):"")); }
+/* قالبِ نمایشِ ساعت دقیقاً مثلِ کیوسک (fmtSlotDisplay): ۱۲ساعته با ارقامِ فارسی */
+function fmtT(t){ var m=/^(\d{1,2}):(\d{2})$/.exec(en(String(t).trim())); if(!m) return fa(t); var h=(+m[1])%12; if(h===0) h=12; return fa(("0"+h).slice(-2)+":"+m[2]); }
+/* انتخابِ روزها مثلِ کیوسک (spacedDayEntries): حداکثر ۲ روز، نزدیک‌ترین به امروز، نه دو روزِ پشتِ‌سرهم */
+var WD_JS={sat:6,sun:0,mon:1,tue:2,wed:3,thu:4,fri:5};
+function daysFromToday(k){ var x=WD_JS[k]; if(x===undefined) return 999; return (x-new Date().getDay()+7)%7; }
+function spacedDays(days){
+ var w=days.map(function(e){ return {e:e,diff:daysFromToday(e.wd||e.key)}; }); w.sort(function(a,b){ return a.diff-b.diff; });
+ var p=[]; w.forEach(function(it){ if(p.length>=2) return; if(!p.length){ p.push(it); return; } if(it.diff-p[p.length-1].diff>=2) p.push(it); });
+ if(p.length<2) w.forEach(function(it){ if(p.length>=2||p.indexOf(it)>-1) return; p.push(it); });
+ return p.map(function(it){ return it.e; });
+}
+function slotTxt(){ return S.mode==="slot"?(S.day+" · ساعت "+fmtT(S.time)):((S.day||"")+(S.time?" · "+S.time.split("، ").map(fmtT).join("، "):"")); }
 
 /* ---- نوار مراحل ---- */
 function drawStepper(){
@@ -291,12 +302,12 @@ function r1(b){
   S.mode="plain"; setNext("ادامه",true);
   $("bNext").onclick=function(){ S.day=sd.value; S.time=st.value; S.fbDay=S.day; S.fbPart=S.time; go(nextStep(2)); }; return; }
  var g=D.groups[S.gi], any=false, wrap=el("div","sl-days");
- g.days.forEach(function(d){ if(!d.suggest||!d.suggest.length) return; any=true;
+ spacedDays(g.days).forEach(function(d){ if(!d.suggest||!d.suggest.length) return; any=true;
   var card=el("div","sl-day"), h=el("div","sl-day-head"), t=el("div","sl-teacher"), av=el("span","av"), nm=el("span",null,teach(d.teacher));
   av.innerHTML=IC.user; t.appendChild(av); t.appendChild(nm);
   var dn=el("div","sl-dayname"); dn.innerHTML=IC.calendar; dn.appendChild(el("span",null,d.label)); h.appendChild(t); h.appendChild(dn); card.appendChild(h);
   var row=el("div","sl-slots");
-  d.suggest.forEach(function(tm){ var bt=el("button","sl-slot"+(S.mode==="slot"&&S.day===d.label&&S.time===tm&&S.teacher===teach(d.teacher)?" selected":"")), rd=el("span","sl-radio"); rd.innerHTML=IC.check; bt.type="button"; bt.appendChild(el("span",null,fa(tm))); bt.appendChild(rd);
+  d.suggest.slice(0,3).forEach(function(tm){ var bt=el("button","sl-slot"+(S.mode==="slot"&&S.day===d.label&&S.time===tm&&S.teacher===teach(d.teacher)?" selected":"")), rd=el("span","sl-radio"); rd.innerHTML=IC.check; bt.type="button"; bt.appendChild(el("span",null,fmtT(tm))); bt.appendChild(rd);
    bt.onclick=function(){ S.day=d.label; S.time=tm; S.teacher=teach(d.teacher); S.tid=d.key||""; S.wdk=d.wd||d.key||""; S.mode="slot"; render(); }; row.appendChild(bt); });
   card.appendChild(row); wrap.appendChild(card); });
  b.appendChild(wrap);
@@ -314,7 +325,7 @@ function rW(b){
  var er=el("div","err"); b.appendChild(er);
  function times(){ var set={},pick=S.wd.length?S.wd:days; g.days.forEach(function(d){ if(pick.indexOf(d.label)>-1) (d.open||[]).forEach(function(t){ set[t]=1; }); }); return Object.keys(set).sort(); }
  function drawT(){ clr(tc); var ts=times(); S.wt=S.wt.filter(function(t){ return ts.indexOf(t)>-1; });
-  ts.forEach(function(t){ var c=el("button","chip"+(S.wt.indexOf(t)>-1?" sel":""),fa(t)); c.type="button"; c.style.direction="ltr"; c.onclick=function(){ var i=S.wt.indexOf(t); if(i>-1) S.wt.splice(i,1); else S.wt.push(t); c.classList.toggle("sel"); }; tc.appendChild(c); }); }
+  ts.forEach(function(t){ var c=el("button","chip"+(S.wt.indexOf(t)>-1?" sel":""),fmtT(t)); c.type="button"; c.style.direction="ltr"; c.onclick=function(){ var i=S.wt.indexOf(t); if(i>-1) S.wt.splice(i,1); else S.wt.push(t); c.classList.toggle("sel"); }; tc.appendChild(c); }); }
  days.forEach(function(d){ var c=el("button","chip"+(S.wd.indexOf(d)>-1?" sel":""),d); c.type="button"; c.onclick=function(){ var i=S.wd.indexOf(d); if(i>-1) S.wd.splice(i,1); else S.wd.push(d); c.classList.toggle("sel"); drawT(); setNext("ادامه",S.wd.length>0); }; dc.appendChild(c); });
  drawT(); setNext("ادامه",S.wd.length>0); startAutoScroll();
  $("bNext").onclick=function(){ if(!S.wd.length){ er.textContent="حداقل یک روز را انتخاب کنید."; return; } S.day=S.wd.join("، "); S.time=S.wt.slice().sort().join("، "); S.teacher=""; S.mode=S.any?"wish":"wait"; go(nextStep(2)); };
@@ -333,7 +344,7 @@ function r2(b){
    pr.appendChild(el("span","plan-price",money(r.price)));
    pr.appendChild(el("span","plan-sub","ماهی "+mil(r.price/ratio)+" میلیون"));
   } else pr.appendChild(el("span","plan-price",money(r.price)));
-  if(k==="semiannual"){ var lk=el("span","plan-lock"),lb=el("b",null,"🔒 علاوه بر تخفیف"); lb.style.display="block"; lb.style.color="var(--primary)"; lk.appendChild(lb); lk.appendChild(document.createTextNode("قیمتِ ثابت؛ تورم شاملِ شما نمی‌شود")); l.appendChild(lk); }
+  if(k==="semiannual"){ var hasDisc=(ratio>=2&&save>0), lk=el("span","plan-lock"),lb=el("b",null,hasDisc?"🔒 علاوه بر تخفیف":"🔒 قیمتِ ثابت"); lb.style.display="block"; lb.style.color="var(--primary)"; lk.appendChild(lb); lk.appendChild(document.createTextNode(hasDisc?"قیمتِ ثابت؛ تورم شاملِ شما نمی‌شود":"افزایشِ شهریه شاملِ شما نمی‌شود")); l.appendChild(lk); }
   c.appendChild(l); c.appendChild(pr);
   c.onclick=function(){ S.plan=k; render(); }; b.appendChild(c); });
  setNext("ادامه",!!S.plan); $("bNext").onclick=function(){ if(S.plan) go(3); };
