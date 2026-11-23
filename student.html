@@ -391,7 +391,7 @@ function renderFin(app,k){
  if(pendR){ var pp=el("p","soft","فیش واریزی شما ارسال شده و در انتظار تأیید آموزشگاه است؛ پس از تأیید، وضعیت حساب شما به‌روزرسانی می‌شود."); c.appendChild(pp); }
  else if(f.net>0){ var d=el("p","err","بدهی: "+money(f.net)+" تومان"); d.style.minHeight="0"; c.appendChild(d); }
  else if(f.net<0) c.appendChild(el("p","ok","بستانکاری: "+money(f.net)+" تومان (از شهریهٔ بعدی کسر می‌شود)"));
- else if(k.expired||(k.remaining!=null&&k.remaining<=1)) { var _np=el("p",null,"بدهیِ معوقه‌ای ندارید. برای ادامهٔ کلاس‌ها، ترمِ جدید را از بخش «تمدید آنلاین ترم» تمدید کنید."); _np.style.color="var(--amber)"; c.appendChild(_np); }
+ else if(k.expired||(k.remaining!=null&&k.remaining<=1)) { var _np=el("p",null,(k.expired?"ترمِ شما به پایان رسیده است.":"ترمِ شما رو به پایان است.")+" برای ادامهٔ کلاس‌ها، ترمِ جدید را تمدید کنید."); _np.style.color="var(--amber)"; c.appendChild(_np); }
   else c.appendChild(el("p","ok","حساب شما تسویه است ✓"));
  if(!pendR&&(k.expired||(k.remaining!=null&&k.remaining<=1))&&k.renew&&k.renew.price){
   var np=+k.renew.price, ncr=f.net<0?-f.net:0, nd=Math.max(0,np-ncr);
