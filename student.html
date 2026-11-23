@@ -485,13 +485,17 @@ function viewHome0(){
  /* banner */
  if(k.expired||(k.remaining!=null&&k.remaining<=2)){
   var bn=el("div","ban"); bn.appendChild(svg(IC.bell));
-  var bx=el("div"); bx.appendChild(el("b",null,k.expired?"زمانِ تمدیدِ ترم است":"زمانِ تمدید نزدیک است"));
-  bx.appendChild(el("span",null,k.expired?"ترمِ شما تمام شده؛ برای ادامهٔ کلاس‌ها با آموزشگاه هماهنگ کنید.":("فقط "+fa(k.remaining)+" جلسه باقی مانده است؛ برای تمدید با آموزشگاه هماهنگ کنید.")));
+  var urgent=!!(k.expired||k.remaining<=1), bt, bs, bn0="";
+  if(k.expired){ bt="ترمِ شما به پایان رسیده است"; bs="برای ادامهٔ کلاس‌ها، همین حالا تمدید کنید."; }
+  else if(urgent){ bt="موعد تمدید شما فرا رسیده است"; bs="لطفاً برای حفظ زمان کلاس خود، تمدید را همین حالا انجام دهید."; bn0="لطفاً برای حفظ زمان کلاس خود، تمدید را همین حالا با آموزشگاه هماهنگ کنید."; }
+  else { bt="ترمِ شما رو به پایان است"; bs="می‌توانید از همین حالا تمدید کنید تا ساعت و استادِ فعلی‌تان برای ترمِ بعد حفظ شود."; }
+  var bx=el("div"); bx.appendChild(el("b",null,bt));
+  bx.appendChild(el("span",null,bn0||(bs+" برای تمدید با آموزشگاه هماهنگ کنید.")));
   var _rp=S.pay; if(!_rp){ try{ _rp=JSON.parse(lsGet("pay")||"null"); }catch(e){} }
   if(!S.offline&&k.sid&&_rp&&_rp.card){
    bn.className="ban tap"; bn.setAttribute("role","button"); bn.tabIndex=0;
-   bx.querySelector("span").textContent=k.expired?"ترمِ شما تمام شده؛ می‌توانید همین‌جا تمدید را انجام دهید.":("فقط "+fa(k.remaining)+" جلسه باقی مانده است؛ می‌توانید همین‌جا تمدید را انجام دهید.");
-   bx.appendChild(el("div","cta","برای تمدید آنلاین اینجا را لمس کنید ‹"));
+   bx.querySelector("span").textContent=bs;
+   bx.appendChild(el("div","cta","جهت تمدید از اینجا اقدام فرمایید ‹"));
    var goRen=function(){ var t=document.getElementById("sec-renew"); if(!t) return; t.scrollIntoView({behavior:"smooth",block:"start"}); t.classList.remove("pulse"); void t.offsetWidth; t.classList.add("pulse"); };
    bn.onclick=goRen; bn.onkeydown=function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); goRen(); } };
   }
