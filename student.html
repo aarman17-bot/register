@@ -238,7 +238,7 @@ function doLogin(pin,fam,remember,silent){
  return post({a:"portal",dg4:pin,fam:fam||""}).then(function(r){
   if(r&&r.ok&&r.pick&&r.pick.length){ viewPick(r.pick,pin,remember); return; }
   if(r&&r.ok&&r.data&&r.data.kids&&r.data.kids.length){
-   S.kids=r.data.kids; S.pin=pin; S.tok=r.data.st||null; S.pay=r.data.pay||null; if(S.pay) lsSet("pay",JSON.stringify(S.pay)); S.fam=r.data.fam||fam||""; S.at=r.data.at||null; S.links=r.data.links||null; if(S.links) lsSet("links",JSON.stringify(S.links)); S.offline=false; S.idx=Math.max(0,Math.min(r.data.me||0,S.kids.length-1));
+   S.kids=r.data.kids; S.pin=pin; S.feat=r.data.features||null; S.tok=r.data.st||null; S.pay=r.data.pay||null; if(S.pay) lsSet("pay",JSON.stringify(S.pay)); S.fam=r.data.fam||fam||""; S.at=r.data.at||null; S.links=r.data.links||null; if(S.links) lsSet("links",JSON.stringify(S.links)); S.offline=false; S.idx=Math.max(0,Math.min(r.data.me||0,S.kids.length-1));
    lsSet("cache",JSON.stringify({kids:S.kids,at:S.at,idx:S.idx}));
    if(remember) lsSet("rem",JSON.stringify(S.tok?{t:S.tok}:{k:pin,f:fam||(r.data.fam||"")})); else lsDel("rem");
    viewHome(); return;
@@ -256,7 +256,7 @@ function doLogin(pin,fam,remember,silent){
 function doTokLogin(lk,remember,silent){
  return post({a:"portal",lk:lk}).then(function(r){
   if(r&&r.ok&&r.data&&r.data.kids&&r.data.kids.length){
-   S.kids=r.data.kids; S.pin=""; S.tok=r.data.st||lk; S.pay=r.data.pay||null; if(S.pay) lsSet("pay",JSON.stringify(S.pay)); S.fam=r.data.fam||""; S.at=r.data.at||null; S.links=r.data.links||null; if(S.links) lsSet("links",JSON.stringify(S.links)); S.offline=false; S.idx=Math.max(0,Math.min(r.data.me||0,S.kids.length-1));
+   S.kids=r.data.kids; S.pin=""; S.feat=r.data.features||null; S.tok=r.data.st||lk; S.pay=r.data.pay||null; if(S.pay) lsSet("pay",JSON.stringify(S.pay)); S.fam=r.data.fam||""; S.at=r.data.at||null; S.links=r.data.links||null; if(S.links) lsSet("links",JSON.stringify(S.links)); S.offline=false; S.idx=Math.max(0,Math.min(r.data.me||0,S.kids.length-1));
    lsSet("cache",JSON.stringify({kids:S.kids,at:S.at,idx:S.idx}));
    if(remember) lsSet("rem",JSON.stringify({t:S.tok})); else lsDel("rem");
    viewHome(); return;
@@ -306,8 +306,8 @@ function renderMsgs(app,k){
   c.appendChild(b); app.appendChild(c);
  });
 }
-var REQ_L={onehour:"درخواست تبدیل به کلاس یک‌ساعته",group:"ثبت درخواست گروه‌نوازی",move:"درخواست تغییر ساعت کلاس",absent:"اطلاع غیبت",receipt:"ارسال فیش واریزی",other:"ارسال پیام به آموزشگاه"};
-var REQ_H={onehour:"در صورت تمایل، توضیحات تکمیلی (مانند ساعت‌های مناسب) را بنویسید.",group:"ساز، سطح و زمان‌های مناسب خود را بنویسید.",move:"ساعت یا روز پیشنهادی خود را بنویسید.",absent:"تاریخ جلسهٔ مورد نظر را بنویسید. توجه: غیبت، حتی با اطلاع قبلی، جزو جلسات دورهٔ شما محسوب می‌شود.",receipt:"توضیحات (اختیاری)",other:"متن پیام خود را بنویسید."};
+var REQ_L={onehour:"درخواست تبدیل به کلاس یک‌ساعته",group:"ثبت درخواست گروه‌نوازی",move:"درخواست تغییر ساعت کلاس",absent:"اطلاع غیبت",receipt:"ارسال فیش واریزی",other:"ارسال پیام به آموزشگاه",ensemble:"رزرو وقت تست همنوازی با استاد آرمان"};
+var REQ_H={onehour:"در صورت تمایل، توضیحات تکمیلی (مانند ساعت‌های مناسب) را بنویسید.",group:"ساز، سطح و زمان‌های مناسب خود را بنویسید.",move:"ساعت یا روز پیشنهادی خود را بنویسید.",absent:"تاریخ جلسهٔ مورد نظر را بنویسید. توجه: غیبت، حتی با اطلاع قبلی، جزو جلسات دورهٔ شما محسوب می‌شود.",receipt:"توضیحات (اختیاری)",other:"متن پیام خود را بنویسید.",ensemble:"ساز، روزها و ساعت‌های مناسب خود را برای جلسهٔ تست بنویسید."};
 var REQ_S={new:"در انتظار بررسی",approved:"تأیید شد",rejected:"رد شد",replied:"پاسخ داده شد"};
 function compressImg(file,cb){
  var fr=new FileReader();
@@ -320,8 +320,9 @@ function compressImg(file,cb){
 function openReq(k,kind,card,pre){
  clr(card);
  card.appendChild(el("h3",null,REQ_L[kind]));
+ if(kind==="ensemble"&&featOn("consent")) card.appendChild(consentNote());
  var ta=el("textarea"); ta.rows=4; ta.maxLength=500; ta.placeholder=REQ_H[kind]; ta.style.cssText="width:100%;margin-top:8px;padding:10px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface2);color:var(--ink)";
- card.appendChild(ta);
+ card.appendChild(ta); if(pre&&pre.text&&kind!=="receipt") ta.value=pre.text;
  var amt=null, fi=null, img=null;
  if(kind==="receipt"){
   amt=el("input"); amt.placeholder="مبلغ واریزی (تومان)"; amt.inputMode="numeric"; amt.style.cssText="width:100%;margin-top:8px;padding:10px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface2);color:var(--ink)"; card.appendChild(amt);
@@ -337,7 +338,7 @@ function openReq(k,kind,card,pre){
   er.textContent="";
   var tx=ta.value.trim();
   if(kind==="receipt"&&!img){ er.textContent="لطفاً تصویر فیش را انتخاب کنید."; return; }
-  if((kind==="other"||kind==="move"||kind==="absent")&&!tx){ er.textContent="لطفاً توضیحات را بنویسید."; return; }
+  if((kind==="other"||kind==="move"||kind==="absent"||kind==="ensemble")&&!tx){ er.textContent="لطفاً توضیحات را بنویسید."; return; }
   ok.disabled=true; cn.disabled=true; ok.textContent="در حال ارسال...";
   post(Object.assign({a:"portal",op:"req",fam:S.fam,sid:k.sid,kind:kind,text:tx,amt:amt?en(amt.value).replace(/\D/g,""):"",img:img||""},authOf())).then(function(r){
    if(r&&r.ok){ k.reqs=(k.reqs||[]).concat([r.req]); try{ lsSet("cache",JSON.stringify({kids:S.kids,at:S.at,idx:S.idx})); }catch(e){} viewHome(); return; }
@@ -394,12 +395,49 @@ function renderFin(app,k){
  pays.filter(function(p){ return !/حقوق|معلم|استاد/.test(String(p&&p.t||"")); }).slice(0,6).forEach(function(p){ c.appendChild(el("p","soft",(p.d||"")+" — "+(p.t||"")+" — "+money(p.a)+" تومان")); });
  app.appendChild(c);
 }
+function openEnsemble(k,c){
+ clr(c);
+ c.appendChild(el("h3",null,"همنوازی با استاد آرمان"));
+ c.appendChild(el("p",null,"نواختن در کنار یک نوازندهٔ حرفه‌ای، تجربه‌ای است که با تمرینِ انفرادی به‌دست نمی‌آید. در این جلسه، شما با ساز خود در کنار استاد آرمان می‌نوازید و با فضای واقعیِ همنوازی، شنیدنِ یکدیگر و هماهنگی در اجرا آشنا می‌شوید."));
+ c.appendChild(el("p",null,"مسیر شما:"));
+ var ul=el("ul","stp");
+ ["آشنایی عملی با همنوازی در کنار یک نوازندهٔ حرفه‌ای","کسب آمادگی برای ورود به کلاس‌های گروه‌نوازی","پس از طیِ مراحل و کلاس‌ها، اجرای شما ضبط می‌شود","اجرای ضبط‌شده در شبکه‌های اجتماعی و وب‌سایتِ آموزشگاه منتشر می‌شود","این جلسه برای همهٔ سازها برگزار می‌شود"].forEach(function(t){ var li=el("li"); li.appendChild(el("i",null,"✓")); li.appendChild(el("span",null,t)); ul.appendChild(li); });
+ c.appendChild(ul);
+ c.appendChild(el("p","soft","مراحل ثبت: ۱) ثبتِ زمان‌های مناسب شما ← ۲) تأیید و اعلامِ وقت توسط آموزشگاه ← ۳) حضور در جلسهٔ تست ← ۴) ادامهٔ کلاس‌های همنوازی و ضبطِ اجرا."));
+ if(featOn("consent")) c.appendChild(consentNote());
+ var go=el("button","btn","درخواست وقت برای تست"); go.type="button"; go.onclick=function(){ openReq(k,"ensemble",c,{text:k.instrument?("ساز: "+k.instrument+"\n"):""}); }; c.appendChild(go);
+ var bk=el("button","btn ghost","بازگشت"); bk.type="button"; bk.onclick=function(){ viewHome(); }; c.appendChild(bk);
+}
+function featOn(n){ return !!(S.feat&&S.feat[n]); }
+function featPerfUrl(){ var u=S.feat&&S.feat.perf; return (typeof u==="string"&&/^https:\/\/[^\s"'<>]{4,490}$/i.test(u))?u:""; }
+function consentNote(){ return el("p","soft","انتشار اجرا با هماهنگی و رضایت شما انجام می‌شود."); }
+function perfBtn(c){ var u=featPerfUrl(); if(!u) return; var a=el("a","btn ghost","دیدن نمونه اجراها"); a.href=u; a.target="_blank"; a.rel="noopener"; a.style.textDecoration="none"; c.appendChild(a); }
+function renderEnsemble(app,k){
+ if(S.offline||!k.sid) return;
+ var c=el("section","cx go"); c.id="sec-ensemble";
+ c.appendChild(el("h3",null,"🎼 همنوازی با استاد آرمان"));
+ var pend=(k.reqs||[]).filter(function(r){ return r.kind==="ensemble"&&r.st==="new"; })[0];
+ if(pend){ c.appendChild(el("p","soft","درخواست شما ثبت شده و در انتظار تأیید آموزشگاه است؛ زمانِ جلسه به شما اعلام می‌شود.")); perfBtn(c); app.appendChild(c); return; }
+ c.appendChild(el("p",null,"جلسهٔ همنوازی با استاد آرمان؛ مسیرِ ورود به گروه‌نوازی و انتشارِ اجرای شما در شبکه‌های اجتماعی و وب‌سایتِ آموزشگاه."));
+ var appr=featOn("path")&&k.ens;
+ if(appr){
+  c.appendChild(el("p","soft","درخواست تست همنوازی شما تأیید شده است. اکنون می‌توانید درخواست گروه‌نوازی ثبت کنید."));
+  var gp=(k.reqs||[]).filter(function(r){ return r.kind==="group"&&r.st==="new"; })[0];
+  if(gp) c.appendChild(el("p","soft","درخواست گروه‌نوازی شما ثبت شده و در انتظار بررسی آموزشگاه است."));
+  else { var gb=el("button","btn","ثبت درخواست گروه‌نوازی"); gb.type="button"; gb.onclick=function(){ openReq(k,"group",c,{text:k.instrument?("ساز: "+k.instrument+"\n"):""}); }; c.appendChild(gb); }
+ }
+ var b=el("button",appr?"btn ghost":"btn","درخواست وقت برای تست"); b.type="button"; b.onclick=function(){ openEnsemble(k,c); }; c.appendChild(b);
+ perfBtn(c);
+ app.appendChild(c);
+}
 function renderServices(app,k){
  if(S.offline||!k.sid) return;
+ renderEnsemble(app,k);
  var rq=(k.reqs||[]).slice(-5).reverse();
  if(rq.length){
   var rc=el("section","cx"); rc.appendChild(el("h3",null,"درخواست‌های من"));
   rq.forEach(function(r){ var p=el("p",null,(REQ_L[r.kind]||"")+" — "+(REQ_S[r.st]||"")); rc.appendChild(p); if(r.reply) rc.appendChild(el("p","soft","پاسخ آموزشگاه: "+r.reply)); });
+  if(featOn("wait")&&rq.some(function(r){ return r.st==="new"; })) rc.appendChild(el("p","soft","معمولاً ظرف یک روز پاسخ داده می‌شود."));
   app.appendChild(rc);
  }
  var c=el("section","cx"); c.id="sec-svc"; c.appendChild(el("h3",null,"خدمات و درخواست‌ها"));
