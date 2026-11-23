@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="fa" dir="rtl"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0A0806"><meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+<meta name="theme-color" content="#0A0806"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="پنل هنرجو"><meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
 <title>پنل هنرجو — آموزشگاه موسیقی ایران</title>
 <style>
 :root{--cream:#12100C;--surface:#1B1712;--surface2:#221C13;--ink:#F3E9D2;--ink-soft:#B8A47C;--line:#4A3D22;--gold:#D4A03C;--gold-hi:#F6D77A;--gold-lo:#B8842E;--gold-bg:#2E2410;--amber:#F0C868;--ok:#6FBF8E;--bad:#D9695C;--stage:#0A0806}
@@ -293,6 +293,27 @@ function bookSlot(k,x,t,box){
   if(r&&r.err==="taken"){ setTimeout(function(){ var e2=document.querySelector(".cx.go .err"); if(e2) e2.textContent=m; },50); }
  },function(){ btns.forEach(function(b){ b.disabled=false; }); if(er) er.textContent="اتصال به اینترنت برقرار نیست."; });
 }
+function isStandalone(){ try{ return (window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||window.navigator.standalone===true; }catch(e){ return false; } }
+window.addEventListener("beforeinstallprompt",function(e){ e.preventDefault(); window.__bip=e; });
+window.addEventListener("appinstalled",function(){ lsSet("inst_done","1"); var n=document.getElementById("sec-install"); if(n&&n.parentNode) n.parentNode.removeChild(n); });
+function renderInstall(app,k){
+ if(S.offline||isStandalone()||lsGet("inst_done")) return;
+ var sn=Number(lsGet("inst_snooze")||0); if(sn&&sn>Date.now()) return;
+ var ua=navigator.userAgent||"", ios=/iPad|iPhone|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1);
+ if(S.tok){ try{ history.replaceState(null,"",location.pathname+"?t="+encodeURIComponent(S.tok)); }catch(e){} }
+ var c=el("section","cx go"); c.id="sec-install";
+ c.appendChild(el("h3",null,"پنل را به صفحهٔ اصلی گوشی اضافه کنید"));
+ c.appendChild(el("p",null,"با افزودنِ پنل به صفحهٔ اصلی، هر زمان با یک لمس به برنامهٔ کلاس‌ها، جلسه‌های باقی‌مانده و اطلاعیه‌های آموزشگاه دسترسی دارید."));
+ var steps=ios
+  ? ["در مرورگر Safari، دکمهٔ اشتراک‌گذاری (مربعِ دارایِ فلش) را بزنید.","گزینهٔ «Add to Home Screen» را انتخاب کنید و تأیید نمایید."]
+  : ["منوی مرورگر (سه نقطه ⋮) را باز کنید.","گزینهٔ «افزودن به صفحهٔ اصلی» (Add to Home screen) را بزنید و تأیید کنید."];
+ var ol=el("ol","stp"); steps.forEach(function(t,i){ var li=el("li"); li.appendChild(el("i",null,String(i+1))); li.appendChild(el("span",null,t)); ol.appendChild(li); }); c.appendChild(ol);
+ if(window.__bip){ var b=el("button","btn","افزودن به صفحهٔ اصلی"); b.type="button"; b.onclick=function(){ try{ window.__bip.prompt(); window.__bip.userChoice.then(function(r){ if(r&&r.outcome==="accepted") lsSet("inst_done","1"); window.__bip=null; }); }catch(e){} }; c.appendChild(b); }
+ var done=el("button","btn ghost","اضافه کردم"); done.type="button"; done.onclick=function(){ lsSet("inst_done","1"); if(c.parentNode) c.parentNode.removeChild(c); }; c.appendChild(done);
+ var later=el("button","btn ghost","بعداً یادآوری کن"); later.type="button";
+ later.onclick=function(){ var n=Number(lsGet("inst_n")||0)+1; lsSet("inst_n",String(n)); lsSet("inst_snooze",String(Date.now()+(n>=3?14:3)*86400000)); if(c.parentNode) c.parentNode.removeChild(c); }; c.appendChild(later);
+ app.appendChild(c);
+}
 function renderMsgs(app,k){
  var now=Date.now();
  (k.msgs||[]).forEach(function(m){
@@ -559,6 +580,7 @@ function viewHome0(){
    }
  }
  renderMsgs(app,k);
+ renderInstall(app,k);
  renderRenewPay(app,k);
  renderCx(app,k);
  /* next session */
@@ -631,6 +653,9 @@ function demoKids(){
 (function init(){
  if(/[?&]demo=1/.test(location.search)){ S.kids=demoKids(); S.at=new Date().toISOString(); viewHome(); return; }
  var mt=/[?&]t=([^&#]+)/.exec(location.search), mg=/[?&]go=(\w+)/.exec(location.search);
+ var mp=/[?&]p=(\d{4})(?:[&#]|$)/.exec(location.search);
+ if(mp&&!mt){ try{ history.replaceState(null,"",location.pathname); }catch(e){}
+  doLogin(mp[1],"",true,false).catch(function(m){ viewLogin("ثبت‌نام شما هنوز تأیید نشده است؛ پس از تأیید توسط آموزشگاه، پنل شما فعال می‌شود و با ۴ رقمِ آخرِ موبایل وارد می‌شوید."); }); return; }
  if(mg) S.go=mg[1];
  if(mt){ var lk=decodeURIComponent(mt[1]); try{ history.replaceState(null,"",location.pathname); }catch(e){}
   doTokLogin(lk,true,false).catch(function(m){ viewLogin(typeof m==="string"?m:""); }); return; }
