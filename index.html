@@ -188,12 +188,12 @@ var BADGE='<svg viewBox="0 0 64 64"><defs><linearGradient id="gb" x1="6" y1="4" 
 var STEPS=["ساز","روز و ساعت","نوع دوره","مشخصات","پرداخت","تایید نهایی"], SICON=[IC.note,IC.clock,IC.calendar,IC.idcard,IC.card,IC.badge], WSTEPS=5;
 var FB=["گیتار","پیانو","ویولن","سه‌تار","تار","سنتور","تنبک","آواز","فلوت / نی","درامز","هنوز مطمئن نیستم"];
 var DAYS=["شنبه","یکشنبه","دوشنبه","سه‌شنبه","چهارشنبه","پنجشنبه"], PARTS=["صبح","ظهر","عصر","شب"];
-var PLAN_KEYS=["monthly","quarterly","semiannual"];
+var BASE_KEYS=["monthly","quarterly","semiannual"]; function planKeys(){ var ks=BASE_KEYS.slice(); if(D&&D.rates) Object.keys(D.rates).forEach(function(k){ if(k.indexOf("cp_")===0) ks.push(k); }); return ks; }
 var D=null, ST=0, S={};
 function reset(){ S={ins:"",gi:-1,day:"",time:"",teacher:"",mode:"",wd:[],wt:[],plan:"",sub:"",any:false,fbDay:"",fbPart:"",paid:false}; }
 reset();
 function hasPay(){ return !!(D&&D.accountNumber); }
-function hasPlans(){ return !!(D&&D.rates&&PLAN_KEYS.some(function(k){ return D.rates[k]; })); }
+function hasPlans(){ return !!(D&&D.rates&&planKeys().some(function(k){ return D.rates[k]; })); }
 function planLabel(k){ var r=D&&D.rates&&D.rates[k]; if(!r) return ""; return k==="monthly"?(r.label+" (فقط ماه اول)"):r.label; }
 /* قالبِ نمایشِ ساعت دقیقاً مثلِ کیوسک (fmtSlotDisplay): ۱۲ساعته با ارقامِ فارسی */
 function fmtT(t){ var m=/^(\d{1,2}):(\d{2})$/.exec(en(String(t).trim())); if(!m) return fa(t); var h=(+m[1])%12; if(h===0) h=12; return fa(("0"+h).slice(-2)+":"+m[2]); }
@@ -333,7 +333,7 @@ function rW(b){
 /* ۳) نوع دوره */
 function r2(b){
  drawTop("نوع دوره را انتخاب کنید");
- PLAN_KEYS.forEach(function(k){ var r=D.rates[k]; if(!r) return;
+ planKeys().forEach(function(k){ var r=D.rates[k]; if(!r) return;
   var c=el("button","plan-card"+(S.plan===k?" sel":"")); c.type="button";
   var l=el("span"),n=el("span","plan-name",planLabel(k)),m=el("span","plan-meta"),ms=el("b",null,fa(r.displaySessions!=null?r.displaySessions:r.sessions)+" جلسه"),md=el("i",null,(/۶۰|60/.test(String(r.label))?"۶۰":"۳۰")+" دقیقه‌ای");
   m.appendChild(ms); m.appendChild(md); l.appendChild(n); l.appendChild(m);
