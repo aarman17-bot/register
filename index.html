@@ -188,7 +188,7 @@ var BADGE='<svg viewBox="0 0 64 64"><defs><linearGradient id="gb" x1="6" y1="4" 
 var STEPS=["ساز","روز و ساعت","نوع دوره","مشخصات","پرداخت","تایید نهایی"], SICON=[IC.note,IC.clock,IC.calendar,IC.idcard,IC.card,IC.badge], WSTEPS=5;
 var FB=["گیتار","پیانو","ویولن","سه‌تار","تار","سنتور","تنبک","آواز","فلوت / نی","درامز","هنوز مطمئن نیستم"];
 var DAYS=["شنبه","یکشنبه","دوشنبه","سه‌شنبه","چهارشنبه","پنجشنبه"], PARTS=["صبح","ظهر","عصر","شب"];
-var BASE_KEYS=["monthly","quarterly","semiannual"]; function planKeys(){ var ks=BASE_KEYS.slice(); if(D&&D.rates) Object.keys(D.rates).forEach(function(k){ if(k.indexOf("cp_")===0) ks.push(k); }); return ks; }
+var BASE_KEYS=["monthly","quarterly","semiannual"]; function planKeys(){ var ks=BASE_KEYS.slice(); if(D&&D.rates) Object.keys(D.rates).forEach(function(k){ if(k.indexOf("cp_")===0) ks.push(k); }); var ord=(D&&D.order)||[]; if(ord.length){ var pos=function(x){ var i=ord.indexOf(x); return i<0?9999:i; }; ks=ks.map(function(x,i){ return {k:x,i:i}; }).sort(function(a,b){ return (pos(a.k)-pos(b.k))||(a.i-b.i); }).map(function(x){ return x.k; }); } return ks; }
 var D=null, ST=0, S={};
 function reset(){ S={ins:"",gi:-1,day:"",time:"",teacher:"",mode:"",wd:[],wt:[],plan:"",sub:"",any:false,fbDay:"",fbPart:"",paid:false}; }
 reset();
