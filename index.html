@@ -470,14 +470,10 @@ $("bBack").onclick=function(){ if(S.sub==="wish"){ S.sub=""; render(); return; }
 
 /* ساعت‌های خالیِ پیشنهادی از برنامهٔ مدیر؛ اگر نرسید، حالتِ ساده */
 (function load(){
- var CK="acAvailCache1", cached=null;
- try{ var raw=localStorage.getItem(CK); if(raw) cached=JSON.parse(raw); }catch(e){}
- var okp=function(d){ return !!(d&&d.groups&&d.groups.length&&d.at&&(Date.now()-Date.parse(d.at)<86400000)); };
- var haveCache=okp(cached);
- D=haveCache?cached:undefined; render();   /* با دادهٔ دفعهٔ قبل فوراً نشان بده، بعد در پس‌زمینه تازه کن */
+ try{ localStorage.removeItem("acAvailCache1"); }catch(e){}   /* کشِ نسخهٔ قبلی پاک می‌شه؛ هر ورود مثلِ بازدیدِ بارِ اول است */
+ render();
  var done=false, fin=function(d){ if(done) return; done=true; clearTimeout(to);
-  if(okp(d)){ D=d; try{ localStorage.setItem(CK,JSON.stringify(d)); }catch(e){} if(ST===0) render(); }
-  else if(!haveCache){ D=null; if(ST===0) render(); } };
+  D=(d&&d.groups&&d.groups.length&&d.at&&(Date.now()-Date.parse(d.at)<86400000))?d:null; render(); };
  var to=setTimeout(function(){ fin(null); },7000);
  (window.__availP||call({a:"avail"})).then(function(r){ fin(r&&r.ok?r.data:null); }).catch(function(){ fin(null); });
 })();
