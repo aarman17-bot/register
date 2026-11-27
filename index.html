@@ -3,7 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0A0806">
 <link rel="preconnect" href="https://script.google.com" crossorigin><link rel="dns-prefetch" href="https://script.googleusercontent.com">
-<script>try{window.__availP=fetch("https://script.google.com/macros/s/AKfycbxLF0ZX8f2cnOAkdh8OjGAMwYilsGdrqMslVVgL_ipTWOfDe5s0Xz-tbSFUbl695EdT/exec",{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({a:"avail"})}).then(function(r){return r.json();});window.__availP.catch(function(){});}catch(e){}</script>
+<script>try{window.__availP=fetch("https://script.google.com/macros/s/AKfycbxLF0ZX8f2cnOAkdh8OjGAMwYilsGdrqMslVVgL_ipTWOfDe5s0Xz-tbSFUbl695EdT/exec",{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({a:"avail"})}).then(function(r){return r.json();});window.__availP.catch(function(){});window.__iconsP=fetch(window.__availUrl||"https://script.google.com/macros/s/AKfycbxLF0ZX8f2cnOAkdh8OjGAMwYilsGdrqMslVVgL_ipTWOfDe5s0Xz-tbSFUbl695EdT/exec",{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({a:"icons"})}).then(function(r){return r.json();});window.__iconsP.catch(function(){});}catch(e){}</script>
 <title>ثبت‌نام هنرجو — آموزشگاه موسیقی ایران</title>
 <style>
 :root{--cream:#12100C;--surface:#1B1712;--ink:#F3E9D2;--ink-soft:#B8A47C;--line:#4A3D22;--primary:#D4A03C;--primary-dark:#8B6420;--primary-bg:#2E2410;--amber:#F0C868;--brick:#C0453A;--stage:#0A0806;--stage-line:#3A2E18}
@@ -473,7 +473,9 @@ $("bBack").onclick=function(){ if(S.sub==="wish"){ S.sub=""; render(); return; }
  try{ localStorage.removeItem("acAvailCache1"); }catch(e){}   /* کشِ نسخهٔ قبلی پاک می‌شه؛ هر ورود مثلِ بازدیدِ بارِ اول است */
  render();
  var done=false, fin=function(d){ if(done) return; done=true; clearTimeout(to);
-  D=(d&&d.groups&&d.groups.length&&d.at&&(Date.now()-Date.parse(d.at)<86400000))?d:null; render(); };
+  D=(d&&d.groups&&d.groups.length&&d.at&&(Date.now()-Date.parse(d.at)<86400000))?d:null; render();
+  /* آیکون‌ها جدا و بعد از نمایشِ صفحه می‌رسن (اگه سرور آیکون‌ها رو تو جوابِ اول نگذاشته باشه) */
+  if(D && D.iconsLater){ (window.__iconsP||call({a:"icons"})).then(function(r){ if(r&&r.ok&&r.icons&&D){ D.icons=r.icons; if(ST===0) render(); } }).catch(function(){}); } };
  var to=setTimeout(function(){ fin(null); },7000);
  (window.__availP||call({a:"avail"})).then(function(r){ fin(r&&r.ok?r.data:null); }).catch(function(){ fin(null); });
 })();
